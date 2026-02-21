@@ -1,0 +1,607 @@
+country_raw,country_std,dataset_name
+Advanced Technology Products,ADVANCED TECHNOLOGY PRODUCTS,bilateral_trade_deficits
+Afghanistan,AFGHANISTAN,bilateral_trade_deficits
+Africa,AFRICA,bilateral_trade_deficits
+Albania,ALBANIA,bilateral_trade_deficits
+Algeria,ALGERIA,bilateral_trade_deficits
+Andorra,ANDORRA,bilateral_trade_deficits
+Angola,ANGOLA,bilateral_trade_deficits
+Anguilla,ANGUILLA,bilateral_trade_deficits
+Antigua and Barbuda,ANTIGUA AND BARBUDA,bilateral_trade_deficits
+Argentina,ARGENTINA,bilateral_trade_deficits
+Armenia,ARMENIA,bilateral_trade_deficits
+Aruba,ARUBA,bilateral_trade_deficits
+Asia,ASIA,bilateral_trade_deficits
+Australia,AUSTRALIA,bilateral_trade_deficits
+Australia and Oceania,AUSTRALIA AND OCEANIA,bilateral_trade_deficits
+Austria,AUSTRIA,bilateral_trade_deficits
+Azerbaijan,AZERBAIJAN,bilateral_trade_deficits
+Bahamas,BAHAMAS,bilateral_trade_deficits
+Bahrain,BAHRAIN,bilateral_trade_deficits
+Bangladesh,BANGLADESH,bilateral_trade_deficits
+Barbados,BARBADOS,bilateral_trade_deficits
+Belarus,BELARUS,bilateral_trade_deficits
+Belgium,BELGIUM,bilateral_trade_deficits
+Belize,BELIZE,bilateral_trade_deficits
+Benin,BENIN,bilateral_trade_deficits
+Bermuda,BERMUDA,bilateral_trade_deficits
+Bhutan,BHUTAN,bilateral_trade_deficits
+Bolivia,BOLIVIA,bilateral_trade_deficits
+Bosnia and Herzegovina,BOSNIA AND HERZEGOVINA,bilateral_trade_deficits
+Botswana,BOTSWANA,bilateral_trade_deficits
+Brazil,BRAZIL,bilateral_trade_deficits
+British Indian Ocean Terr.,BRITISH INDIAN OCEAN TERR,bilateral_trade_deficits
+British Virgin Islands,BRITISH VIRGIN ISLANDS,bilateral_trade_deficits
+Brunei,BRUNEI,bilateral_trade_deficits
+Bulgaria,BULGARIA,bilateral_trade_deficits
+Burkina Faso,BURKINA FASO,bilateral_trade_deficits
+Burma,BURMA,bilateral_trade_deficits
+Burundi,BURUNDI,bilateral_trade_deficits
+Cabo Verde,CABO VERDE,bilateral_trade_deficits
+CAFTA-DR,CAFTA DR,bilateral_trade_deficits
+Cambodia,CAMBODIA,bilateral_trade_deficits
+Cameroon,CAMEROON,bilateral_trade_deficits
+Canada,CANADA,bilateral_trade_deficits
+Cayman Islands,CAYMAN ISLANDS,bilateral_trade_deficits
+Central African Republic,CENTRAL AFRICAN REPUBLIC,bilateral_trade_deficits
+Chad,CHAD,bilateral_trade_deficits
+Chile,CHILE,bilateral_trade_deficits
+China,CHINA,bilateral_trade_deficits
+Christmas Island,CHRISTMAS ISLAND,bilateral_trade_deficits
+Cocos (Keeling) Islands,COCOS KEELING ISLANDS,bilateral_trade_deficits
+Colombia,COLOMBIA,bilateral_trade_deficits
+Comoros,COMOROS,bilateral_trade_deficits
+Congo,CONGO,bilateral_trade_deficits
+Cook Islands,COOK ISLANDS,bilateral_trade_deficits
+Costa Rica,COSTA RICA,bilateral_trade_deficits
+Cote d'Ivoire,COTE D IVOIRE,bilateral_trade_deficits
+Croatia,CROATIA,bilateral_trade_deficits
+Cuba,CUBA,bilateral_trade_deficits
+Curacao,CURACAO,bilateral_trade_deficits
+Cyprus,CYPRUS,bilateral_trade_deficits
+Czech Republic,CZECHIA,bilateral_trade_deficits
+Czechoslovakia,CZECHOSLOVAKIA,bilateral_trade_deficits
+Denmark,DENMARK,bilateral_trade_deficits
+Djibouti,DJIBOUTI,bilateral_trade_deficits
+Dominica,DOMINICA,bilateral_trade_deficits
+Dominican Republic,DOMINICAN REPUBLIC,bilateral_trade_deficits
+Democratic Republic of Congo,DR CONGO,bilateral_trade_deficits
+East Timor,EAST TIMOR,bilateral_trade_deficits
+Ecuador,ECUADOR,bilateral_trade_deficits
+Egypt,EGYPT,bilateral_trade_deficits
+El Salvador,EL SALVADOR,bilateral_trade_deficits
+Equatorial Guinea,EQUATORIAL GUINEA,bilateral_trade_deficits
+Eritrea,ERITREA,bilateral_trade_deficits
+Estonia,ESTONIA,bilateral_trade_deficits
+Eswatini,ESWATINI,bilateral_trade_deficits
+Ethiopia,ETHIOPIA,bilateral_trade_deficits
+European Union,EU,bilateral_trade_deficits
+Europe,EUROPE,bilateral_trade_deficits
+Falkland Islands(Islas Malvin,FALKLAND ISLANDS ISLAS MALVIN,bilateral_trade_deficits
+Faroe Islands,FAROE ISLANDS,bilateral_trade_deficits
+Fiji,FIJI,bilateral_trade_deficits
+Finland,FINLAND,bilateral_trade_deficits
+France,FRANCE,bilateral_trade_deficits
+French Guiana,FRENCH GUIANA,bilateral_trade_deficits
+French Polynesia,FRENCH POLYNESIA,bilateral_trade_deficits
+French Southern and Antarctic,FRENCH SOUTHERN AND ANTARCTIC,bilateral_trade_deficits
+Gabon,GABON,bilateral_trade_deficits
+Gambia,GAMBIA,bilateral_trade_deficits
+Gaza Strip admin. by Israel,GAZA STRIP ADMIN BY ISRAEL,bilateral_trade_deficits
+Georgia,GEORGIA,bilateral_trade_deficits
+Germany,GERMANY,bilateral_trade_deficits
+Ghana,GHANA,bilateral_trade_deficits
+Gibraltar,GIBRALTAR,bilateral_trade_deficits
+Greece,GREECE,bilateral_trade_deficits
+Greenland,GREENLAND,bilateral_trade_deficits
+Grenada,GRENADA,bilateral_trade_deficits
+Guadeloupe,GUADELOUPE,bilateral_trade_deficits
+Guatemala,GUATEMALA,bilateral_trade_deficits
+Guinea,GUINEA,bilateral_trade_deficits
+Guinea-Bissau,GUINEA BISSAU,bilateral_trade_deficits
+Guyana,GUYANA,bilateral_trade_deficits
+Haiti,HAITI,bilateral_trade_deficits
+Heard and McDonald Islands,HEARD AND MCDONALD ISLANDS,bilateral_trade_deficits
+Honduras,HONDURAS,bilateral_trade_deficits
+Hong Kong,HONG KONG,bilateral_trade_deficits
+Hungary,HUNGARY,bilateral_trade_deficits
+Iceland,ICELAND,bilateral_trade_deficits
+India,INDIA,bilateral_trade_deficits
+Indonesia,INDONESIA,bilateral_trade_deficits
+International Organizations,INTERNATIONAL ORGANIZATIONS,bilateral_trade_deficits
+Iran,IRAN,bilateral_trade_deficits
+Iraq,IRAQ,bilateral_trade_deficits
+Iraq-Saudi Arabia Neutral Zone,IRAQ SAUDI ARABIA NEUTRAL ZONE,bilateral_trade_deficits
+Ireland,IRELAND,bilateral_trade_deficits
+Israel,ISRAEL,bilateral_trade_deficits
+Italy,ITALY,bilateral_trade_deficits
+Jamaica,JAMAICA,bilateral_trade_deficits
+Japan,JAPAN,bilateral_trade_deficits
+Jordan,JORDAN,bilateral_trade_deficits
+Kazakhstan,KAZAKHSTAN,bilateral_trade_deficits
+Kenya,KENYA,bilateral_trade_deficits
+Kiribati,KIRIBATI,bilateral_trade_deficits
+"Korea, North",KOREA NORTH,bilateral_trade_deficits
+Kosovo,KOSOVO,bilateral_trade_deficits
+Kuwait,KUWAIT,bilateral_trade_deficits
+Kyrgyzstan,KYRGYZSTAN,bilateral_trade_deficits
+Laos,LAOS,bilateral_trade_deficits
+Latvia,LATVIA,bilateral_trade_deficits
+Lebanon,LEBANON,bilateral_trade_deficits
+Lesotho,LESOTHO,bilateral_trade_deficits
+Liberia,LIBERIA,bilateral_trade_deficits
+Libya,LIBYA,bilateral_trade_deficits
+Liechtenstein,LIECHTENSTEIN,bilateral_trade_deficits
+Lithuania,LITHUANIA,bilateral_trade_deficits
+Luxembourg,LUXEMBOURG,bilateral_trade_deficits
+Macau,MACAU,bilateral_trade_deficits
+Macedonia,MACEDONIA,bilateral_trade_deficits
+Madagascar,MADAGASCAR,bilateral_trade_deficits
+Malawi,MALAWI,bilateral_trade_deficits
+Malaysia,MALAYSIA,bilateral_trade_deficits
+Maldives,MALDIVES,bilateral_trade_deficits
+Mali,MALI,bilateral_trade_deficits
+Malta,MALTA,bilateral_trade_deficits
+Marshall Islands,MARSHALL ISLANDS,bilateral_trade_deficits
+Martinique,MARTINIQUE,bilateral_trade_deficits
+Mauritania,MAURITANIA,bilateral_trade_deficits
+Mauritius,MAURITIUS,bilateral_trade_deficits
+Mayotte,MAYOTTE,bilateral_trade_deficits
+Mexico,MEXICO,bilateral_trade_deficits
+Micronesia,MICRONESIA,bilateral_trade_deficits
+Moldova,MOLDOVA,bilateral_trade_deficits
+Monaco,MONACO,bilateral_trade_deficits
+Mongolia,MONGOLIA,bilateral_trade_deficits
+Montenegro,MONTENEGRO,bilateral_trade_deficits
+Montserrat,MONTSERRAT,bilateral_trade_deficits
+Morocco,MOROCCO,bilateral_trade_deficits
+Mozambique,MOZAMBIQUE,bilateral_trade_deficits
+NAFTA with Canada (Consump),NAFTA WITH CANADA CONSUMP,bilateral_trade_deficits
+NAFTA with Mexico (Consump),NAFTA WITH MEXICO CONSUMP,bilateral_trade_deficits
+Namibia,NAMIBIA,bilateral_trade_deficits
+Nauru,NAURU,bilateral_trade_deficits
+Nepal,NEPAL,bilateral_trade_deficits
+Netherlands,NETHERLANDS,bilateral_trade_deficits
+Netherlands Antilles,NETHERLANDS ANTILLES,bilateral_trade_deficits
+New Caledonia,NEW CALEDONIA,bilateral_trade_deficits
+New Zealand,NEW ZEALAND,bilateral_trade_deficits
+Nicaragua,NICARAGUA,bilateral_trade_deficits
+Niger,NIGER,bilateral_trade_deficits
+Nigeria,NIGERIA,bilateral_trade_deficits
+Niue,NIUE,bilateral_trade_deficits
+Norfolk Island,NORFOLK ISLAND,bilateral_trade_deficits
+North America,NORTH AMERICA,bilateral_trade_deficits
+Norway,NORWAY,bilateral_trade_deficits
+Oman,OMAN,bilateral_trade_deficits
+Pacific Rim,PACIFIC RIM,bilateral_trade_deficits
+Pakistan,PAKISTAN,bilateral_trade_deficits
+Palau,PALAU,bilateral_trade_deficits
+Panama,PANAMA,bilateral_trade_deficits
+Papua New Guinea,PAPUA NEW GUINEA,bilateral_trade_deficits
+Paraguay,PARAGUAY,bilateral_trade_deficits
+Peru,PERU,bilateral_trade_deficits
+Philippines,PHILIPPINES,bilateral_trade_deficits
+Pitcairn Islands,PITCAIRN ISLANDS,bilateral_trade_deficits
+Poland,POLAND,bilateral_trade_deficits
+Portugal,PORTUGAL,bilateral_trade_deficits
+Qatar,QATAR,bilateral_trade_deficits
+Republic of Yemen,REPUBLIC OF YEMEN,bilateral_trade_deficits
+Reunion,REUNION,bilateral_trade_deficits
+Romania,ROMANIA,bilateral_trade_deficits
+Russia,RUSSIA,bilateral_trade_deficits
+Rwanda,RWANDA,bilateral_trade_deficits
+Samoa,SAMOA,bilateral_trade_deficits
+San Marino,SAN MARINO,bilateral_trade_deficits
+Sao Tome and Principe,SAO TOME AND PRINCIPE,bilateral_trade_deficits
+Saudi Arabia,SAUDI ARABIA,bilateral_trade_deficits
+Senegal,SENEGAL,bilateral_trade_deficits
+Serbia,SERBIA,bilateral_trade_deficits
+Serbia and Montenegro,SERBIA AND MONTENEGRO,bilateral_trade_deficits
+Seychelles,SEYCHELLES,bilateral_trade_deficits
+Sierra Leone,SIERRA LEONE,bilateral_trade_deficits
+Singapore,SINGAPORE,bilateral_trade_deficits
+Sint Maarten,SINT MAARTEN,bilateral_trade_deficits
+Slovakia,SLOVAKIA,bilateral_trade_deficits
+Slovenia,SLOVENIA,bilateral_trade_deficits
+Solomon Islands,SOLOMON ISLANDS,bilateral_trade_deficits
+Somalia,SOMALIA,bilateral_trade_deficits
+South Africa,SOUTH AFRICA,bilateral_trade_deficits
+South and Central America,SOUTH AND CENTRAL AMERICA,bilateral_trade_deficits
+"Korea, South",SOUTH KOREA,bilateral_trade_deficits
+South Sudan,SOUTH SUDAN,bilateral_trade_deficits
+Spain,SPAIN,bilateral_trade_deficits
+Sri Lanka,SRI LANKA,bilateral_trade_deficits
+St Helena,ST HELENA,bilateral_trade_deficits
+St Kitts and Nevis,ST KITTS AND NEVIS,bilateral_trade_deficits
+St Lucia,ST LUCIA,bilateral_trade_deficits
+St Pierre and Miquelon,ST PIERRE AND MIQUELON,bilateral_trade_deficits
+St Vincent and the Grenadines,ST VINCENT AND THE GRENADINES,bilateral_trade_deficits
+Sub Saharan Africa,SUB SAHARAN AFRICA,bilateral_trade_deficits
+Sudan,SUDAN,bilateral_trade_deficits
+Suriname,SURINAME,bilateral_trade_deficits
+"Svalbard, Jan Mayen Island",SVALBARD JAN MAYEN ISLAND,bilateral_trade_deficits
+Sweden,SWEDEN,bilateral_trade_deficits
+Switzerland,SWITZERLAND,bilateral_trade_deficits
+Syria,SYRIA,bilateral_trade_deficits
+Taiwan,TAIWAN,bilateral_trade_deficits
+Tajikistan,TAJIKISTAN,bilateral_trade_deficits
+Tanzania,TANZANIA,bilateral_trade_deficits
+Thailand,THAILAND,bilateral_trade_deficits
+Togo,TOGO,bilateral_trade_deficits
+Tokelau,TOKELAU,bilateral_trade_deficits
+Tonga,TONGA,bilateral_trade_deficits
+Trinidad and Tobago,TRINIDAD AND TOBAGO,bilateral_trade_deficits
+Tunisia,TUNISIA,bilateral_trade_deficits
+Turkey,TURKIYE,bilateral_trade_deficits
+Turkmenistan,TURKMENISTAN,bilateral_trade_deficits
+Turks and Caicos Islands,TURKS AND CAICOS ISLANDS,bilateral_trade_deficits
+Tuvalu,TUVALU,bilateral_trade_deficits
+United Arab Emirates,UAE,bilateral_trade_deficits
+Uganda,UGANDA,bilateral_trade_deficits
+United Kingdom,UK,bilateral_trade_deficits
+Ukraine,UKRAINE,bilateral_trade_deficits
+Unidentified Countries,UNIDENTIFIED COUNTRIES,bilateral_trade_deficits
+Uruguay,URUGUAY,bilateral_trade_deficits
+USMCA with Canada (Consump),USMCA WITH CANADA CONSUMP,bilateral_trade_deficits
+USMCA with Mexico (Consump),USMCA WITH MEXICO CONSUMP,bilateral_trade_deficits
+USSR,USSR,bilateral_trade_deficits
+Uzbekistan,UZBEKISTAN,bilateral_trade_deficits
+Vanuatu,VANUATU,bilateral_trade_deficits
+Vatican City,VATICAN CITY,bilateral_trade_deficits
+Venezuela,VENEZUELA,bilateral_trade_deficits
+Vietnam,VIETNAM,bilateral_trade_deficits
+Wallis and Futuna,WALLIS AND FUTUNA,bilateral_trade_deficits
+West Bank admin. by Israel,WEST BANK ADMIN BY ISRAEL,bilateral_trade_deficits
+Western Sahara,WESTERN SAHARA,bilateral_trade_deficits
+"World, Not Seasonally Adjusted",WORLD NOT SEASONALLY ADJUSTED,bilateral_trade_deficits
+"World, Seasonally Adjusted",WORLD SEASONALLY ADJUSTED,bilateral_trade_deficits
+Yugoslavia (former),YUGOSLAVIA FORMER,bilateral_trade_deficits
+Zambia,ZAMBIA,bilateral_trade_deficits
+Zimbabwe,ZIMBABWE,bilateral_trade_deficits
+Albania,ALBANIA,forex_data
+Algeria,ALGERIA,forex_data
+"Andorra, Principality of",ANDORRA PRINCIPALITY OF,forex_data
+Angola,ANGOLA,forex_data
+"Anguilla, United Kingdom-British Overseas Territory",ANGUILLA UNITED KINGDOM BRITISH OVERSEAS TERRITORY,forex_data
+Antigua and Barbuda,ANTIGUA AND BARBUDA,forex_data
+Argentina,ARGENTINA,forex_data
+"Armenia, Republic of",ARMENIA REPUBLIC OF,forex_data
+"Aruba, Kingdom of the Netherlands",ARUBA KINGDOM OF THE NETHERLANDS,forex_data
+Australia,AUSTRALIA,forex_data
+"Azerbaijan, Republic of",AZERBAIJAN REPUBLIC OF,forex_data
+"Bahamas, The",BAHAMAS THE,forex_data
+"Bahrain, Kingdom of",BAHRAIN KINGDOM OF,forex_data
+Bangladesh,BANGLADESH,forex_data
+Barbados,BARBADOS,forex_data
+"Belarus, Republic of",BELARUS REPUBLIC OF,forex_data
+Belize,BELIZE,forex_data
+Benin,BENIN,forex_data
+Bermuda,BERMUDA,forex_data
+Bhutan,BHUTAN,forex_data
+Bolivia,BOLIVIA,forex_data
+Bosnia and Herzegovina,BOSNIA AND HERZEGOVINA,forex_data
+Botswana,BOTSWANA,forex_data
+Brazil,BRAZIL,forex_data
+Brunei Darussalam,BRUNEI DARUSSALAM,forex_data
+Bulgaria,BULGARIA,forex_data
+Burkina Faso,BURKINA FASO,forex_data
+Burundi,BURUNDI,forex_data
+Cabo Verde,CABO VERDE,forex_data
+Cambodia,CAMBODIA,forex_data
+Cameroon,CAMEROON,forex_data
+Canada,CANADA,forex_data
+Cayman Islands,CAYMAN ISLANDS,forex_data
+Central African Economic and Monetary Community (CEMAC),CENTRAL AFRICAN ECONOMIC AND MONETARY COMMUNITY CEMAC,forex_data
+Central African Republic,CENTRAL AFRICAN REPUBLIC,forex_data
+Chad,CHAD,forex_data
+Chile,CHILE,forex_data
+"China, People's Republic of",CHINA PEOPLE S REPUBLIC OF,forex_data
+Colombia,COLOMBIA,forex_data
+"Comoros, Union of the",COMOROS UNION OF THE,forex_data
+"Congo, Democratic Republic of the",CONGO DEMOCRATIC REPUBLIC OF THE,forex_data
+"Congo, Republic of",CONGO REPUBLIC OF,forex_data
+Costa Rica,COSTA RICA,forex_data
+Curaçao and Sint Maarten,CURAÇAO AND SINT MAARTEN,forex_data
+"Curaçao, Kingdom of the Netherlands",CURAÇAO KINGDOM OF THE NETHERLANDS,forex_data
+Czech Republic,CZECHIA,forex_data
+Côte d'Ivoire,CÔTE D IVOIRE,forex_data
+Denmark,DENMARK,forex_data
+Djibouti,DJIBOUTI,forex_data
+Dominica,DOMINICA,forex_data
+Dominican Republic,DOMINICAN REPUBLIC,forex_data
+Eastern Caribbean Currency Union (ECCU),EASTERN CARIBBEAN CURRENCY UNION ECCU,forex_data
+Ecuador,ECUADOR,forex_data
+"Egypt, Arab Republic of",EGYPT ARAB REPUBLIC OF,forex_data
+El Salvador,EL SALVADOR,forex_data
+"Equatorial Guinea, Republic of",EQUATORIAL GUINEA REPUBLIC OF,forex_data
+"Eritrea, The State of",ERITREA THE STATE OF,forex_data
+"Eswatini, Kingdom of",ESWATINI KINGDOM OF,forex_data
+"Ethiopia, The Federal Democratic Republic of",ETHIOPIA THE FEDERAL DEMOCRATIC REPUBLIC OF,forex_data
+Euro Area (EA),EURO AREA EA,forex_data
+Faroe Islands,FAROE ISLANDS,forex_data
+"Fiji, Republic of",FIJI REPUBLIC OF,forex_data
+French Polynesia,FRENCH POLYNESIA,forex_data
+Gabon,GABON,forex_data
+"Gambia, The",GAMBIA THE,forex_data
+Georgia,GEORGIA,forex_data
+Ghana,GHANA,forex_data
+Gibraltar,GIBRALTAR,forex_data
+Grenada,GRENADA,forex_data
+Guatemala,GUATEMALA,forex_data
+Guernsey,GUERNSEY,forex_data
+Guinea-Bissau,GUINEA BISSAU,forex_data
+Guyana,GUYANA,forex_data
+Haiti,HAITI,forex_data
+Honduras,HONDURAS,forex_data
+"Hong Kong Special Administrative Region, People's Republic of China",HONG KONG SPECIAL ADMINISTRATIVE REGION PEOPLE S REPUBLIC OF CHINA,forex_data
+Hungary,HUNGARY,forex_data
+Iceland,ICELAND,forex_data
+India,INDIA,forex_data
+Indonesia,INDONESIA,forex_data
+Iraq,IRAQ,forex_data
+Isle of Man,ISLE OF MAN,forex_data
+Israel,ISRAEL,forex_data
+Jamaica,JAMAICA,forex_data
+Japan,JAPAN,forex_data
+Jersey,JERSEY,forex_data
+Jordan,JORDAN,forex_data
+"Kazakhstan, Republic of",KAZAKHSTAN REPUBLIC OF,forex_data
+Kenya,KENYA,forex_data
+Kiribati,KIRIBATI,forex_data
+"Kosovo, Republic of",KOSOVO REPUBLIC OF,forex_data
+Kuwait,KUWAIT,forex_data
+Kyrgyz Republic,KYRGYZ REPUBLIC,forex_data
+Lao People's Democratic Republic,LAO PEOPLE S DEMOCRATIC REPUBLIC,forex_data
+Lebanon,LEBANON,forex_data
+"Lesotho, Kingdom of",LESOTHO KINGDOM OF,forex_data
+Liberia,LIBERIA,forex_data
+Libya,LIBYA,forex_data
+"Liechtenstein, Principality of",LIECHTENSTEIN PRINCIPALITY OF,forex_data
+"Macao Special Administrative Region, People's Republic of China",MACAO SPECIAL ADMINISTRATIVE REGION PEOPLE S REPUBLIC OF CHINA,forex_data
+"Madagascar, Republic of",MADAGASCAR REPUBLIC OF,forex_data
+Malaysia,MALAYSIA,forex_data
+Maldives,MALDIVES,forex_data
+Mali,MALI,forex_data
+Mauritius,MAURITIUS,forex_data
+Mexico,MEXICO,forex_data
+"Micronesia, Federated States of",MICRONESIA FEDERATED STATES OF,forex_data
+"Moldova, Republic of",MOLDOVA REPUBLIC OF,forex_data
+Mongolia,MONGOLIA,forex_data
+Montenegro,MONTENEGRO,forex_data
+"Montserrat, United Kingdom-British Overseas Territory",MONTSERRAT UNITED KINGDOM BRITISH OVERSEAS TERRITORY,forex_data
+Morocco,MOROCCO,forex_data
+"Mozambique, Republic of",MOZAMBIQUE REPUBLIC OF,forex_data
+Namibia,NAMIBIA,forex_data
+"Nauru, Republic of",NAURU REPUBLIC OF,forex_data
+Nepal,NEPAL,forex_data
+New Caledonia,NEW CALEDONIA,forex_data
+New Zealand,NEW ZEALAND,forex_data
+Nicaragua,NICARAGUA,forex_data
+Niger,NIGER,forex_data
+Nigeria,NIGERIA,forex_data
+"North Macedonia, Republic of",NORTH MACEDONIA REPUBLIC OF,forex_data
+Norway,NORWAY,forex_data
+Oman,OMAN,forex_data
+Pakistan,PAKISTAN,forex_data
+"Palau, Republic of",PALAU REPUBLIC OF,forex_data
+Panama,PANAMA,forex_data
+Papua New Guinea,PAPUA NEW GUINEA,forex_data
+Paraguay,PARAGUAY,forex_data
+Peru,PERU,forex_data
+Philippines,PHILIPPINES,forex_data
+"Poland, Republic of",POLAND REPUBLIC OF,forex_data
+Qatar,QATAR,forex_data
+Romania,ROMANIA,forex_data
+Russian Federation,RUSSIA,forex_data
+Rwanda,RWANDA,forex_data
+Samoa,SAMOA,forex_data
+"San Marino, Republic of",SAN MARINO REPUBLIC OF,forex_data
+Saudi Arabia,SAUDI ARABIA,forex_data
+Senegal,SENEGAL,forex_data
+"Serbia, Republic of",SERBIA REPUBLIC OF,forex_data
+Seychelles,SEYCHELLES,forex_data
+Sierra Leone,SIERRA LEONE,forex_data
+Singapore,SINGAPORE,forex_data
+"Sint Maarten, Kingdom of the Netherlands",SINT MAARTEN KINGDOM OF THE NETHERLANDS,forex_data
+Solomon Islands,SOLOMON ISLANDS,forex_data
+South Africa,SOUTH AFRICA,forex_data
+"Korea, Republic of",SOUTH KOREA,forex_data
+"South Sudan, Republic of",SOUTH SUDAN REPUBLIC OF,forex_data
+St. Kitts and Nevis,ST KITTS AND NEVIS,forex_data
+St. Lucia,ST LUCIA,forex_data
+St. Vincent and the Grenadines,ST VINCENT AND THE GRENADINES,forex_data
+Suriname,SURINAME,forex_data
+Sweden,SWEDEN,forex_data
+Switzerland,SWITZERLAND,forex_data
+"São Tomé and Príncipe, Democratic Republic of",SÃO TOMÉ AND PRÍNCIPE DEMOCRATIC REPUBLIC OF,forex_data
+Taiwan Province of China,TAIWAN PROVINCE OF CHINA,forex_data
+"Tajikistan, Republic of",TAJIKISTAN REPUBLIC OF,forex_data
+"Tanzania, United Republic of",TANZANIA UNITED REPUBLIC OF,forex_data
+Thailand,THAILAND,forex_data
+"Timor-Leste, Democratic Republic of",TIMOR LESTE DEMOCRATIC REPUBLIC OF,forex_data
+Togo,TOGO,forex_data
+Tonga,TONGA,forex_data
+Trinidad and Tobago,TRINIDAD AND TOBAGO,forex_data
+Tunisia,TUNISIA,forex_data
+Tuvalu,TUVALU,forex_data
+"Türkiye, Republic of",TÜRKIYE REPUBLIC OF,forex_data
+United Arab Emirates,UAE,forex_data
+Uganda,UGANDA,forex_data
+United Kingdom,UK,forex_data
+Ukraine,UKRAINE,forex_data
+Uruguay,URUGUAY,forex_data
+United States,USA,forex_data
+"Uzbekistan, Republic of",UZBEKISTAN REPUBLIC OF,forex_data
+Vanuatu,VANUATU,forex_data
+"Venezuela, República Bolivariana de",VENEZUELA REPÚBLICA BOLIVARIANA DE,forex_data
+Vietnam,VIETNAM,forex_data
+West African Economic and Monetary Union (WAEMU),WEST AFRICAN ECONOMIC AND MONETARY UNION WAEMU,forex_data
+Zambia,ZAMBIA,forex_data
+Zimbabwe,ZIMBABWE,forex_data
+Argentina,ARGENTINA,manufacturing_data
+Australia,AUSTRALIA,manufacturing_data
+Azerbaijan,AZERBAIJAN,manufacturing_data
+Bolivia (Plurinational State of),BOLIVIA PLURINATIONAL STATE OF,manufacturing_data
+Bosnia and Herzegovina,BOSNIA AND HERZEGOVINA,manufacturing_data
+Botswana,BOTSWANA,manufacturing_data
+Brazil,BRAZIL,manufacturing_data
+Bulgaria,BULGARIA,manufacturing_data
+Cambodia,CAMBODIA,manufacturing_data
+Canada,CANADA,manufacturing_data
+Chile,CHILE,manufacturing_data
+China,CHINA,manufacturing_data
+"China, Hong Kong SAR",CHINA HONG KONG SAR,manufacturing_data
+"China, Macao SAR",CHINA MACAO SAR,manufacturing_data
+"China, Taiwan Province",CHINA TAIWAN PROVINCE,manufacturing_data
+Colombia,COLOMBIA,manufacturing_data
+Croatia,CROATIA,manufacturing_data
+Cyprus,CYPRUS,manufacturing_data
+Czechia,CZECHIA,manufacturing_data
+Denmark,DENMARK,manufacturing_data
+Ecuador,ECUADOR,manufacturing_data
+Egypt,EGYPT,manufacturing_data
+El Salvador,EL SALVADOR,manufacturing_data
+Finland,FINLAND,manufacturing_data
+France,FRANCE,manufacturing_data
+Georgia,GEORGIA,manufacturing_data
+Germany,GERMANY,manufacturing_data
+Greece,GREECE,manufacturing_data
+Guatemala,GUATEMALA,manufacturing_data
+Hungary,HUNGARY,manufacturing_data
+Iceland,ICELAND,manufacturing_data
+India,INDIA,manufacturing_data
+Indonesia,INDONESIA,manufacturing_data
+Ireland,IRELAND,manufacturing_data
+Israel,ISRAEL,manufacturing_data
+Italy,ITALY,manufacturing_data
+Japan,JAPAN,manufacturing_data
+Jordan,JORDAN,manufacturing_data
+Lithuania,LITHUANIA,manufacturing_data
+Malaysia,MALAYSIA,manufacturing_data
+Malta,MALTA,manufacturing_data
+Mexico,MEXICO,manufacturing_data
+Mongolia,MONGOLIA,manufacturing_data
+Morocco,MOROCCO,manufacturing_data
+Mozambique,MOZAMBIQUE,manufacturing_data
+Namibia,NAMIBIA,manufacturing_data
+Netherlands (Kingdom of the),NETHERLANDS KINGDOM OF THE,manufacturing_data
+New Zealand,NEW ZEALAND,manufacturing_data
+Nigeria,NIGERIA,manufacturing_data
+North Macedonia,NORTH MACEDONIA,manufacturing_data
+Norway,NORWAY,manufacturing_data
+Oman,OMAN,manufacturing_data
+Pakistan,PAKISTAN,manufacturing_data
+Paraguay,PARAGUAY,manufacturing_data
+Peru,PERU,manufacturing_data
+Philippines,PHILIPPINES,manufacturing_data
+Poland,POLAND,manufacturing_data
+Portugal,PORTUGAL,manufacturing_data
+Qatar,QATAR,manufacturing_data
+Romania,ROMANIA,manufacturing_data
+Saudi Arabia,SAUDI ARABIA,manufacturing_data
+Senegal,SENEGAL,manufacturing_data
+Serbia,SERBIA,manufacturing_data
+Singapore,SINGAPORE,manufacturing_data
+Slovakia,SLOVAKIA,manufacturing_data
+Slovenia,SLOVENIA,manufacturing_data
+South Africa,SOUTH AFRICA,manufacturing_data
+Republic of Korea,SOUTH KOREA,manufacturing_data
+Spain,SPAIN,manufacturing_data
+Sri Lanka,SRI LANKA,manufacturing_data
+Sweden,SWEDEN,manufacturing_data
+Switzerland,SWITZERLAND,manufacturing_data
+Thailand,THAILAND,manufacturing_data
+Tunisia,TUNISIA,manufacturing_data
+Türkiye,TURKIYE,manufacturing_data
+Uganda,UGANDA,manufacturing_data
+United Kingdom,UK,manufacturing_data
+Ukraine,UKRAINE,manufacturing_data
+United Republic of Tanzania,UNITED REPUBLIC OF TANZANIA,manufacturing_data
+Uruguay,URUGUAY,manufacturing_data
+United States of America,USA,manufacturing_data
+Viet Nam,VIETNAM,manufacturing_data
+Zimbabwe,ZIMBABWE,manufacturing_data
+Automotive,AUTOMOTIVE,political_risk_data
+Canada,CANADA,political_risk_data
+China,CHINA,political_risk_data
+Global,GLOBAL,political_risk_data
+Mexico,MEXICO,political_risk_data
+Steel,STEEL,political_risk_data
+Afghanistan,AFGHANISTAN,tariff_tracker
+Algeria,ALGERIA,tariff_tracker
+Angola,ANGOLA,tariff_tracker
+Argentina,ARGENTINA,tariff_tracker
+Australia,AUSTRALIA,tariff_tracker
+Bangladesh,BANGLADESH,tariff_tracker
+Bolivia,BOLIVIA,tariff_tracker
+Bosnia and Herzegovina,BOSNIA AND HERZEGOVINA,tariff_tracker
+Botswana,BOTSWANA,tariff_tracker
+Brazil,BRAZIL,tariff_tracker
+Brunei,BRUNEI,tariff_tracker
+Cambodia,CAMBODIA,tariff_tracker
+Cameroon,CAMEROON,tariff_tracker
+Canada,CANADA,tariff_tracker
+Chad,CHAD,tariff_tracker
+China,CHINA,tariff_tracker
+Costa Rica,COSTA RICA,tariff_tracker
+Côte d`Ivoire,CÔTE D`IVOIRE,tariff_tracker
+Democratic Republic of the Congo,DEMOCRATIC REPUBLIC OF THE CONGO,tariff_tracker
+Ecuador,ECUADOR,tariff_tracker
+Equatorial Guinea,EQUATORIAL GUINEA,tariff_tracker
+European Union,EU,tariff_tracker
+Falkland Islands,FALKLAND ISLANDS,tariff_tracker
+Fiji,FIJI,tariff_tracker
+Ghana,GHANA,tariff_tracker
+Global,GLOBAL,tariff_tracker
+Guyana,GUYANA,tariff_tracker
+Iceland,ICELAND,tariff_tracker
+India,INDIA,tariff_tracker
+Indonesia,INDONESIA,tariff_tracker
+Iraq,IRAQ,tariff_tracker
+Israel,ISRAEL,tariff_tracker
+Japan,JAPAN,tariff_tracker
+Jordan,JORDAN,tariff_tracker
+Kazakhstan,KAZAKHSTAN,tariff_tracker
+Laos,LAOS,tariff_tracker
+Lesotho,LESOTHO,tariff_tracker
+Libya,LIBYA,tariff_tracker
+Liechtenstein,LIECHTENSTEIN,tariff_tracker
+Madagascar,MADAGASCAR,tariff_tracker
+Malawi,MALAWI,tariff_tracker
+Malaysia,MALAYSIA,tariff_tracker
+Mauritius,MAURITIUS,tariff_tracker
+Mexico,MEXICO,tariff_tracker
+Moldova,MOLDOVA,tariff_tracker
+Mozambique,MOZAMBIQUE,tariff_tracker
+Myanmar (Burma),MYANMAR BURMA,tariff_tracker
+Namibia,NAMIBIA,tariff_tracker
+Nauru,NAURU,tariff_tracker
+New Zealand,NEW ZEALAND,tariff_tracker
+Nicaragua,NICARAGUA,tariff_tracker
+Nigeria,NIGERIA,tariff_tracker
+North Macedonia,NORTH MACEDONIA,tariff_tracker
+Norway,NORWAY,tariff_tracker
+Pakistan,PAKISTAN,tariff_tracker
+Papa New Guinea,PAPA NEW GUINEA,tariff_tracker
+Philippines,PHILIPPINES,tariff_tracker
+Russia,RUSSIA,tariff_tracker
+Saudi Arabia,SAUDI ARABIA,tariff_tracker
+Serbia,SERBIA,tariff_tracker
+South Africa,SOUTH AFRICA,tariff_tracker
+South Korea,SOUTH KOREA,tariff_tracker
+Sri Lanka,SRI LANKA,tariff_tracker
+Switzerland,SWITZERLAND,tariff_tracker
+Syria,SYRIA,tariff_tracker
+Taiwan,TAIWAN,tariff_tracker
+Thailand,THAILAND,tariff_tracker
+Trinidad and Tobago,TRINIDAD AND TOBAGO,tariff_tracker
+Tunisia,TUNISIA,tariff_tracker
+Turkey,TURKIYE,tariff_tracker
+Uganda,UGANDA,tariff_tracker
+United Kingdom,UK,tariff_tracker
+Vanuatu,VANUATU,tariff_tracker
+Venezuela,VENEZUELA,tariff_tracker
+Vietnam,VIETNAM,tariff_tracker
+Zambia,ZAMBIA,tariff_tracker
+Zimbabwe,ZIMBABWE,tariff_tracker
+United States,USA,unemployment

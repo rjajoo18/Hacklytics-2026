@@ -1,17 +1,19 @@
 """
-Model training, scoring, artifact persistence, and single-row prediction.
+Model training, scoring, artifact persistence, and inference.
 
-Decision path:
-  ┌─ n_positive >= 50 → CatBoostClassifier (time-based split, PR-AUC eval,
-  │                      probability output, calibrated)
-  └─ else
-       ├─ 1 <= n_positive < 50 → RegularisedLogisticRegression
-       │                          coefficients become heuristic weights
-       └─ n_positive == 0 → pure heuristic scoring
+Honest-metrics CV changes:
+- Skip walk-forward folds with tiny validation windows or too few positives/negatives.
+  This prevents misleading PR-AUC/ROC-AUC spikes (e.g., 1.0 on a single-month val set).
 
-Output for every path:
-  {mode, tariff_risk_score (0-100), tariff_risk_prob (if supervised),
-   top_drivers}
+Model choices:
+- country: HistGradientBoostingClassifier (nonlinear, handles clustered events better)
+- sector : LogisticRegression (works well on your dataset)
+
+Calibration:
+- CalibratedClassifierCV(method="sigmoid", cv=3) on the same dataset used to fit the final model.
+
+Weighting:
+- Combines panel sample_weight (mass-rollout downweight) and class-imbalance pos_weight.
 """
 
 import os
@@ -23,71 +25,77 @@ import joblib
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import average_precision_score, roc_auc_score
+from sklearn.ensemble import HistGradientBoostingClassifier
 
-from .features import FEATURE_COLS, CAT_FEATURE_COLS, get_feature_matrix
+from .features import FEATURE_COLS, CAT_FEATURE_COLS
 
 warnings.filterwarnings("ignore")
 
 ARTIFACTS_DIR = os.path.join(os.path.dirname(__file__), "..", "artifacts")
 
-# Heuristic feature weights (applied to standardised values).
-# Signs are chosen so that "more risky" → higher score.
+# ---------------------------------------------------------------------------
+# Training / CV thresholds
+# ---------------------------------------------------------------------------
+MIN_POS = 20
+
+EMBARGO_MONTHS = 1
+VAL_WINDOW_MONTHS = 3
+MIN_TRAIN_MONTHS = 4
+
+# Honest CV thresholds (NEW)
+MIN_VAL_MONTHS = 2      # skip folds where validation spans < 2 months
+MIN_VAL_POS = 5         # skip folds with < 5 positives in validation
+MIN_VAL_NEG = 5         # skip folds with < 5 negatives in validation
+MIN_TRAIN_POS = 10      # skip folds with < 10 positives in training
+
 _HEURISTIC_WEIGHTS: dict[str, float] = {
-    "pol_risk_3m_change":      0.28,   # rising risk score → more likely tariff
-    "pol_risk_score":          0.18,   # currently high risk
-    "trade_deficit":           0.14,   # large US deficit → target for tariffs
-    "trade_deficit_3m_change": 0.10,   # growing deficit
-    "gscpi":                   0.12,   # supply-chain stress
-    "fx_3m_std":               0.08,   # FX volatility
-    "gscpi_3m_mean":           0.05,
-    "unrate":                  0.03,   # US unemployment (macro context)
-    "manuf_M_T":               0.02,
-    "month_of_year":           0.00,   # minimal direct effect
+    "trade_deficit":                    0.14,
+    "trade_deficit_3m_change":          0.10,
+    "gscpi":                            0.12,
+    "tariff_count_country_12m":         0.18,
+    "months_since_last_tariff_country": -0.15,
+    "authority_count_12m_IEEPA":        0.12,
+    "unrate":                           0.03,
+    "month_of_year":                    0.00,
 }
 
-MIN_SUPERVISED = 50   # switch threshold
-
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Utilities
 # ---------------------------------------------------------------------------
-
-def _impute(X: pd.DataFrame, fill_values: dict | None = None) -> pd.DataFrame:
-    """Fill NaNs: use provided fill_values dict or column medians."""
+def _impute(X: pd.DataFrame, feature_cols: list, fill_values: dict) -> pd.DataFrame:
     X = X.copy()
-    num_cols = [c for c in FEATURE_COLS if c in X.columns]
-    for col in num_cols:
-        fv = (fill_values or {}).get(col, X[col].median())
-        X[col] = X[col].fillna(fv if pd.notna(fv) else 0.0)
-    for col in CAT_FEATURE_COLS:
+    for col in feature_cols:
         if col in X.columns:
-            X[col] = X[col].fillna("UNKNOWN").astype(str)
+            fv = fill_values.get(col, X[col].median())
+            X[col] = X[col].fillna(fv if pd.notna(fv) else 0.0)
     return X
 
 
-def _compute_fill_values(X: pd.DataFrame) -> dict:
-    return {col: float(X[col].median()) for col in FEATURE_COLS if col in X.columns}
+def _compute_fill_values(X: pd.DataFrame, feature_cols: list) -> dict:
+    return {col: float(X[col].median()) for col in feature_cols if col in X.columns}
+
+
+def _safe_roc_auc(y_true: np.ndarray, y_score: np.ndarray) -> float:
+    y_true = np.asarray(y_true)
+    if len(np.unique(y_true)) < 2:
+        return 0.5
+    return float(roc_auc_score(y_true, y_score))
 
 
 def _score_to_prob(raw_score: float) -> float:
-    """Sigmoid mapping of raw heuristic score → [0, 1]."""
     return float(1.0 / (1.0 + np.exp(-raw_score)))
 
 
-def _top_k_drivers(
-    feature_names: list[str],
-    feature_values: np.ndarray,
-    weights: np.ndarray,
-    k: int = 5,
-) -> list[dict]:
+def _top_k_drivers(feature_names: list, feature_values: np.ndarray, weights: np.ndarray, k: int = 5) -> list:
     contributions = weights * feature_values
     idx = np.argsort(np.abs(contributions))[::-1][:k]
     return [
         {
-            "feature": feature_names[i],
-            "value": round(float(feature_values[i]), 4),
+            "feature":      feature_names[i],
+            "value":        round(float(feature_values[i]), 4),
             "contribution": round(float(contributions[i]), 4),
         }
         for i in idx
@@ -95,285 +103,423 @@ def _top_k_drivers(
     ]
 
 
-# ---------------------------------------------------------------------------
-# Training
-# ---------------------------------------------------------------------------
+def _build_row_weights(feature_df: pd.DataFrame, y: pd.Series) -> np.ndarray:
+    """Combine sample_weight (mass-rollout) with pos_weight (class imbalance)."""
+    n_pos = float(y.sum())
+    n_neg = float((y == 0).sum())
+    pos_weight = (n_neg / n_pos) if n_pos > 0 else 1.0
 
-def train(feature_df: pd.DataFrame) -> dict:
+    base = feature_df["sample_weight"].values if "sample_weight" in feature_df.columns else np.ones(len(y))
+    w = base.astype(float).copy()
+    w[y.values == 1] *= pos_weight
+    return w
+
+
+def _make_model(model_label: str):
     """
-    Train a model on the labelled feature panel.
-
-    Parameters
-    ----------
-    feature_df : full panel with FEATURE_COLS, CAT_FEATURE_COLS, 'y', 'month_start'
-
-    Returns
-    -------
-    model_pkg : dict containing all artifacts needed for prediction
+    Choose model family:
+    - country: HistGradientBoostingClassifier
+    - sector:  LogisticRegression
     """
-    X_full, y_full = get_feature_matrix(feature_df)
+    if model_label == "country":
+        return HistGradientBoostingClassifier(
+            learning_rate=0.08,
+            max_depth=3,
+            max_leaf_nodes=31,
+            min_samples_leaf=20,
+            l2_regularization=0.1,
+            early_stopping=True,
+            random_state=42,
+        ), "hgb"
+
+    return LogisticRegression(
+        max_iter=5000,
+        class_weight=None,  # handled via sample weights
+        random_state=42,
+        C=0.5,
+    ), "logreg"
+
+
+# ---------------------------------------------------------------------------
+# Walk-forward CV (metrics only)
+# ---------------------------------------------------------------------------
+def _walk_forward_cv(
+    feature_df: pd.DataFrame,
+    X: pd.DataFrame,
+    y: pd.Series,
+    num_cols: list,
+    model_label: str,
+) -> list:
+    months_sorted = sorted(feature_df["month_start"].unique())
+    n = len(months_sorted)
+    fold_results: list[dict] = []
+
+    for k in range(MIN_TRAIN_MONTHS, n):
+        train_end = months_sorted[k - 1]
+        val_start_idx = k + EMBARGO_MONTHS
+        val_end_idx = val_start_idx + VAL_WINDOW_MONTHS
+
+        if val_start_idx >= n:
+            break
+
+        val_months = months_sorted[val_start_idx:val_end_idx]
+        if not val_months:
+            break
+
+        # HONEST METRICS: skip tiny validation windows
+        if len(val_months) < MIN_VAL_MONTHS:
+            continue
+
+        tr_mask = feature_df["month_start"] <= train_end
+        val_mask = feature_df["month_start"].isin(val_months)
+
+        y_tr = y[tr_mask]
+        y_val = y[val_mask]
+
+        n_tr_pos = int(y_tr.sum())
+        n_val_pos = int(y_val.sum())
+        n_val_neg = int((y_val == 0).sum())
+
+        # HONEST METRICS: skip folds with too little signal
+        if n_tr_pos < MIN_TRAIN_POS:
+            continue
+        if n_val_pos < MIN_VAL_POS:
+            continue
+        if n_val_neg < MIN_VAL_NEG:
+            continue
+
+        model, kind = _make_model(model_label)
+        w_tr = _build_row_weights(feature_df.loc[tr_mask], y_tr)
+
+        if kind == "logreg":
+            scaler = StandardScaler()
+            X_tr = scaler.fit_transform(X.loc[tr_mask, num_cols].values)
+            X_va = scaler.transform(X.loc[val_mask, num_cols].values)
+            model.fit(X_tr, y_tr.values, sample_weight=w_tr)
+            proba = model.predict_proba(X_va)[:, 1]
+        else:
+            X_tr = X.loc[tr_mask, num_cols].values
+            X_va = X.loc[val_mask, num_cols].values
+            model.fit(X_tr, y_tr.values, sample_weight=w_tr)
+            proba = model.predict_proba(X_va)[:, 1]
+
+        pr_auc = float(average_precision_score(y_val.values, proba))
+        base = float(y_val.mean())
+        roc = _safe_roc_auc(y_val.values, proba)
+
+        fold_results.append({
+            "train_end": str(train_end.date()),
+            "val_start": str(val_months[0].date()),
+            "val_end": str(val_months[-1].date()),
+            "n_train": int(tr_mask.sum()),
+            "n_val": int(val_mask.sum()),
+            "n_pos_train": n_tr_pos,
+            "n_pos_val": n_val_pos,
+            "n_neg_val": n_val_neg,
+            "pr_auc": round(pr_auc, 4),
+            "roc_auc": round(roc, 4),
+            "baseline_pr_auc": round(base, 4),
+        })
+
+    return fold_results
+
+
+# ---------------------------------------------------------------------------
+# Core training
+# ---------------------------------------------------------------------------
+def train(
+    feature_df: pd.DataFrame,
+    feature_cols: list | None = None,
+    cat_cols: list | None = None,
+    model_label: str = "model",
+) -> dict:
+    if feature_cols is None:
+        feature_cols = FEATURE_COLS
+    if cat_cols is None:
+        cat_cols = CAT_FEATURE_COLS
+
+    all_cols = [c for c in (cat_cols + feature_cols) if c in feature_df.columns]
+    X_full = feature_df[all_cols].copy()
+    y_full = feature_df["y"].copy()
+
     n_pos = int(y_full.sum())
-    print(f"[train] Positive labels: {n_pos} / {len(y_full)}")
+    n_total = len(y_full)
+    baseline = round(n_pos / n_total, 4) if n_total else 0.0
 
-    fill_values = _compute_fill_values(X_full)
-    X_full = _impute(X_full, fill_values)
+    print(f"[train:{model_label}] +{n_pos}/{n_total} (pos_rate={baseline:.4f}, baseline_PR-AUC={baseline:.4f})")
 
-    num_cols = [c for c in FEATURE_COLS if c in X_full.columns]
+    fill_values = _compute_fill_values(X_full, feature_cols)
+    X_full = _impute(X_full, feature_cols, fill_values)
+    num_cols = [c for c in feature_cols if c in X_full.columns]
 
-    # ----------------------------------------------------------------
-    # Path A: Supervised (CatBoost or LogReg)
-    # ----------------------------------------------------------------
-    if n_pos >= MIN_SUPERVISED:
-        # Time-based split: last 20% of months → test
-        months_sorted = sorted(feature_df["month_start"].unique())
-        cutoff = months_sorted[int(len(months_sorted) * 0.8)]
-        train_mask = feature_df["month_start"] < cutoff
-        test_mask  = feature_df["month_start"] >= cutoff
-
-        X_tr, y_tr = X_full[train_mask], y_full[train_mask]
-        X_te, y_te = X_full[test_mask],  y_full[test_mask]
-
+    # fallback
+    if n_pos < MIN_POS:
+        print(f"[train:{model_label}] Only {n_pos} positives (<{MIN_POS}) -> risk_score fallback")
         scaler = StandardScaler()
-        X_tr_num = scaler.fit_transform(X_tr[num_cols].values)
-        X_te_num = scaler.transform(X_te[num_cols].values)
+        X_num = scaler.fit_transform(X_full[num_cols].values)
+        weights = None
 
-        # Scale ratio for class imbalance
-        scale_pos = max(1, int((y_tr == 0).sum() / max(1, (y_tr == 1).sum())))
-
+        w_all = _build_row_weights(feature_df, y_full)
         try:
-            from catboost import CatBoostClassifier
-
-            cat_idx = [list(X_full.columns).index(c)
-                       for c in CAT_FEATURE_COLS if c in X_full.columns]
-
-            model = CatBoostClassifier(
-                iterations=400,
-                learning_rate=0.05,
-                depth=6,
-                loss_function="Logloss",
-                eval_metric="AUC",
-                scale_pos_weight=scale_pos,
-                random_seed=42,
-                verbose=0,
-                allow_writing_files=False,
-            )
-            model.fit(
-                X_tr, y_tr,
-                cat_features=cat_idx,
-                eval_set=(X_te, y_te),
-                early_stopping_rounds=40,
-            )
-            proba_te = model.predict_proba(X_te)[:, 1]
-            pr_auc = average_precision_score(y_te, proba_te)
-            print(f"[train] CatBoost  PR-AUC = {pr_auc:.4f}")
-            mode = "probability"
-            weights = None   # use SHAP from CatBoost
-            feat_importances = dict(zip(
-                list(X_full.columns),
-                model.get_feature_importance().tolist()
-            ))
-
-        except ImportError:
-            print("[train] catboost not found — falling back to LogisticRegression")
-            model = LogisticRegression(C=0.1, max_iter=2000, class_weight="balanced",
-                                       random_state=42)
-            model.fit(X_tr_num, y_tr.values)
-            proba_te = model.predict_proba(X_te_num)[:, 1]
-            pr_auc = average_precision_score(y_te, proba_te)
-            print(f"[train] LogReg  PR-AUC = {pr_auc:.4f}")
-            mode = "probability"
-            weights = model.coef_[0]
-            feat_importances = dict(zip(num_cols, np.abs(weights).tolist()))
+            lr = LogisticRegression(max_iter=5000, random_state=42, C=0.2)
+            lr.fit(X_num, y_full.values, sample_weight=w_all)
+            coef = lr.coef_[0]
+            weights = {num_cols[i]: float(coef[i]) for i in range(len(num_cols))}
+        except Exception:
+            pass
 
         return {
-            "mode": mode,
-            "model": model,
+            "mode": "risk_score",
+            "model": None,
             "scaler": scaler,
             "num_cols": num_cols,
             "all_cols": list(X_full.columns),
-            "cat_feature_cols": CAT_FEATURE_COLS,
+            "cat_cols": cat_cols,
+            "feature_cols": feature_cols,
             "fill_values": fill_values,
-            "pr_auc": pr_auc,
+            "fit_on_scaled_num": True,
+            "pr_auc": None,
+            "roc_auc": None,
+            "baseline_pr_auc": baseline,
             "n_positive": n_pos,
+            "n_total": n_total,
             "weights": weights,
-            "feat_importances": feat_importances,
-            "heuristic_weights": _HEURISTIC_WEIGHTS,
+            "fold_metrics": [],
             "feature_panel": feature_df.copy(),
+            "model_label": model_label,
         }
 
-    # ----------------------------------------------------------------
-    # Path B: Risk Score (LogReg with few labels OR pure heuristic)
-    # ----------------------------------------------------------------
-    scaler = StandardScaler()
-    X_num = scaler.fit_transform(X_full[num_cols].values)
+    # CV metrics
+    print(f"[train:{model_label}] Walk-forward CV ...")
+    fold_metrics = _walk_forward_cv(feature_df, X_full, y_full, num_cols, model_label)
 
-    if n_pos >= 1:
-        logreg = LogisticRegression(C=0.05, max_iter=2000, class_weight="balanced",
-                                    random_state=42)
-        try:
-            logreg.fit(X_num, y_full.values)
-            coef = logreg.coef_[0]
-            # Build weights dict from significant coefficients
-            weights = {num_cols[i]: float(coef[i]) for i in range(len(num_cols))}
-            print(f"[train] LogReg risk-score mode (n_pos={n_pos}), using coef as weights")
-        except Exception as e:
-            print(f"[train] LogReg failed ({e}), using heuristic weights")
-            weights = None
+    if fold_metrics:
+        mean_pr = round(float(np.mean([f["pr_auc"] for f in fold_metrics])), 4)
+        mean_roc = round(float(np.mean([f["roc_auc"] for f in fold_metrics])), 4)
+        print(f"[train:{model_label}] CV MEAN PR-AUC={mean_pr:.4f} ROC-AUC={mean_roc:.4f} ({len(fold_metrics)} folds)")
     else:
-        weights = None
-        print("[train] No positive labels — pure heuristic scoring")
+        mean_pr = None
+        mean_roc = None
+        print(f"[train:{model_label}] CV: no valid folds (after honest-metrics filtering)")
+
+    # Final fit on ALL rows (hackathon mode)
+    model, kind = _make_model(model_label)
+    w_all = _build_row_weights(feature_df, y_full)
+
+    scaler = None
+    if kind == "logreg":
+        scaler = StandardScaler()
+        X_all = scaler.fit_transform(X_full[num_cols].values)
+        model.fit(X_all, y_full.values, sample_weight=w_all)
+        calibrated = CalibratedClassifierCV(model, method="sigmoid", cv=3)
+        calibrated.fit(X_all, y_full.values, sample_weight=w_all)
+        fit_on_scaled = True
+
+        coef = getattr(model, "coef_", None)
+        feat_imps = {}
+        if coef is not None:
+            feat_imps = dict(zip(num_cols, np.abs(coef[0]).tolist()))
+    else:
+        X_all = X_full[num_cols].values
+        model.fit(X_all, y_full.values, sample_weight=w_all)
+        calibrated = CalibratedClassifierCV(model, method="sigmoid", cv=3)
+        calibrated.fit(X_all, y_full.values, sample_weight=w_all)
+        fit_on_scaled = False
+        feat_imps = {}
+
+    print(f"[train:{model_label}] Final fit done. Calibration=cv3 sigmoid. kind={kind}")
 
     return {
-        "mode": "risk_score",
-        "model": None,
+        "mode": "probability",
+        "model": calibrated,
         "scaler": scaler,
         "num_cols": num_cols,
         "all_cols": list(X_full.columns),
-        "cat_feature_cols": CAT_FEATURE_COLS,
+        "cat_cols": cat_cols,
+        "feature_cols": feature_cols,
         "fill_values": fill_values,
-        "pr_auc": None,
+        "fit_on_scaled_num": fit_on_scaled,
+        "pr_auc": mean_pr,
+        "roc_auc": mean_roc,
+        "baseline_pr_auc": baseline,
         "n_positive": n_pos,
-        "weights": weights,
-        "feat_importances": None,
-        "heuristic_weights": _HEURISTIC_WEIGHTS,
+        "n_total": n_total,
+        "weights": None,
+        "feat_importances": feat_imps,
+        "fold_metrics": fold_metrics,
         "feature_panel": feature_df.copy(),
+        "model_label": model_label,
     }
 
 
 # ---------------------------------------------------------------------------
-# Prediction
+# Inference helpers
 # ---------------------------------------------------------------------------
+def _predict_from_pkg(entity: str, key_col: str, pkg: dict) -> dict:
+    panel = pkg["feature_panel"]
+    fill_values = pkg["fill_values"]
+    num_cols = pkg["num_cols"]
+    feature_cols = pkg.get("feature_cols", FEATURE_COLS)
+    cat_cols = pkg.get("cat_cols", CAT_FEATURE_COLS)
+    mode = pkg["mode"]
 
-def predict_single(country: str, sector: str, model_pkg: dict) -> dict:
-    """
-    Predict tariff risk for a (country, sector) pair using the latest available
-    feature row in the saved feature panel.
-
-    Returns
-    -------
-    dict with keys: mode, tariff_risk_score, tariff_risk_prob (optional),
-                    top_drivers, country, sector, as_of_month
-    """
-    panel: pd.DataFrame = model_pkg["feature_panel"]
-    fill_values: dict    = model_pkg["fill_values"]
-    num_cols: list[str]  = model_pkg["num_cols"]
-    mode: str            = model_pkg["mode"]
-
-    # Look for exact match, then country-only fallback
-    mask = (panel["country"] == country) & (panel["sector"] == sector)
+    entity_norm = str(entity).strip()
+    series = panel[key_col].astype(str).str.strip()
+    mask = series.str.casefold() == entity_norm.casefold()
     sub = panel[mask]
+
     if sub.empty:
-        # Fallback: use most-recent row for the country with any sector
-        mask_c = panel["country"] == country
-        sub = panel[mask_c]
-    if sub.empty:
-        # No data at all — build a zero row
-        row_df = pd.DataFrame([{c: np.nan for c in FEATURE_COLS + CAT_FEATURE_COLS}])
-        row_df["country"] = country
-        row_df["sector"]  = sector
+        row_df = pd.DataFrame([{c: np.nan for c in feature_cols + cat_cols}])
+        row_df[key_col] = entity_norm
         as_of = "n/a"
     else:
-        # Take the most recent month
-        latest_month = sub["month_start"].max()
-        row_df = sub[sub["month_start"] == latest_month].head(1).copy()
-        as_of = str(latest_month.date())
+        latest = sub["month_start"].max()
+        row_df = sub[sub["month_start"] == latest].head(1).copy()
+        as_of = str(latest.date())
 
-    row_df = _impute(row_df, fill_values)
-    X_row = row_df[[c for c in FEATURE_COLS if c in row_df.columns]]
-    x_num = X_row[num_cols].values[0] if num_cols else np.array([])
+    row_df = _impute(row_df, feature_cols, fill_values)
+    x_num = row_df[num_cols].values[0] if num_cols else np.array([])
 
-    # Scale
-    scaler: StandardScaler = model_pkg["scaler"]
-    try:
-        x_scaled = scaler.transform(x_num.reshape(1, -1))[0]
-    except Exception:
-        x_scaled = x_num
+    result = {"mode": mode, "entity": entity_norm, "key_col": key_col, "as_of_month": as_of}
 
-    # ----------------------------------------------------------------
-    # Compute score / probability
-    # ----------------------------------------------------------------
-    result: dict = {"mode": mode, "country": country, "sector": sector,
-                    "as_of_month": as_of}
+    if mode == "probability" and pkg["model"] is not None:
+        model = pkg["model"]
+        if pkg.get("fit_on_scaled_num", False):
+            scaler = pkg["scaler"]
+            x_scaled = scaler.transform(x_num.reshape(1, -1))
+            proba = float(model.predict_proba(x_scaled)[:, 1][0])
+        else:
+            proba = float(model.predict_proba(x_num.reshape(1, -1))[:, 1][0])
 
-    if mode == "probability" and model_pkg["model"] is not None:
-        model = model_pkg["model"]
-        try:
-            # CatBoost can accept the full row (with cat features)
-            full_row = row_df[[c for c in model_pkg["all_cols"] if c in row_df.columns]]
-            proba = float(model.predict_proba(full_row)[:, 1][0])
-        except Exception:
-            # Fallback for LogReg
-            proba = float(model_pkg["model"].predict_proba(x_scaled.reshape(1, -1))[:, 1][0])
-
-        risk_score = round(proba * 100, 2)
         result["tariff_risk_prob"] = round(proba, 4)
-        result["tariff_risk_score"] = risk_score
+        result["tariff_risk_score"] = round(proba * 100, 2)
+        result["tariff_risk_pct"] = f"{round(proba * 100, 1)}%"
 
-        # Top drivers via feature importance (fallback)
-        importances = model_pkg.get("feat_importances") or {}
-        top_features = sorted(importances.items(), key=lambda x: abs(x[1]), reverse=True)[:5]
-        result["top_drivers"] = [
-            {"feature": f, "importance": round(v, 4)} for f, v in top_features
-        ]
+        imps = pkg.get("feat_importances") or {}
+        if imps:
+            top = sorted(imps.items(), key=lambda kv: abs(kv[1]), reverse=True)[:5]
+            result["top_drivers"] = [{"feature": f, "importance": round(v, 4)} for f, v in top]
+        else:
+            vals = x_num
+            idx = np.argsort(np.abs(vals))[::-1][:5]
+            result["top_drivers"] = [{"feature": num_cols[i], "importance": round(float(vals[i]), 4)} for i in idx]
 
-    else:
-        # Risk score path
-        hw = model_pkg["weights"] or _HEURISTIC_WEIGHTS
-        w_arr = np.array([hw.get(c, 0.0) for c in num_cols])
-        raw_score = float(np.dot(w_arr, x_scaled))
-        proba = _score_to_prob(raw_score)
-        risk_score = round(proba * 100, 2)
+        return result
 
-        result["tariff_risk_score"] = risk_score
-        if mode == "risk_score":
-            result["tariff_risk_prob"] = None
+    hw = pkg.get("weights") or _HEURISTIC_WEIGHTS
+    w_arr = np.array([hw.get(c, 0.0) for c in num_cols])
+    raw = float(np.dot(w_arr, x_num))
+    proba = _score_to_prob(raw)
 
-        result["top_drivers"] = _top_k_drivers(num_cols, x_scaled, w_arr, k=5)
-
+    result["tariff_risk_prob"] = round(proba, 4)
+    result["tariff_risk_score"] = round(proba * 100, 2)
+    result["tariff_risk_pct"] = f"{round(proba * 100, 1)}%"
+    result["top_drivers"] = _top_k_drivers(num_cols, x_num, w_arr)
     return result
 
+
+def predict_blended(country: str, sector: str, country_pkg: dict, sector_pkg: dict | None = None) -> dict:
+    country_norm = str(country).strip().upper()
+    sector_norm = str(sector).strip()
+
+    c_res = _predict_from_pkg(country_norm, "country_std", country_pkg)
+
+    if sector_pkg is None or sector_norm.casefold() == "general":
+        prob = float(c_res.get("tariff_risk_prob", 0.0) or 0.0)
+        return {
+            "country": country_norm,
+            "sector": sector_norm,
+            "tariff_risk_prob": prob,
+            "tariff_risk_score": round(prob * 100, 2),
+            "tariff_risk_pct": f"{round(prob * 100, 1)}%",
+            "as_of_month": c_res.get("as_of_month"),
+            "blend_mode": "country_only",
+            "country_model": c_res,
+        }
+
+    s_res = _predict_from_pkg(sector_norm, "sector_std", sector_pkg)
+    prob_c = float(c_res.get("tariff_risk_prob", 0.0) or 0.0)
+    prob_s = float(s_res.get("tariff_risk_prob", 0.0) or 0.0)
+
+    blended = round(0.6 * prob_c + 0.4 * prob_s, 4)
+
+    return {
+        "country": country_norm,
+        "sector": sector_norm,
+        "tariff_risk_prob": blended,
+        "tariff_risk_score": round(blended * 100, 2),
+        "tariff_risk_pct": f"{round(blended * 100, 1)}%",
+        "as_of_month": c_res.get("as_of_month"),
+        "blend_mode": "0.6_country_0.4_sector",
+        "country_model": {"prob": round(prob_c, 4), "pct": f"{round(prob_c * 100, 1)}%", "top_drivers": c_res.get("top_drivers")},
+        "sector_model": {"prob": round(prob_s, 4), "pct": f"{round(prob_s * 100, 1)}%", "top_drivers": s_res.get("top_drivers")},
+    }
+
+def predict_sector(sector: str, sector_pkg: dict) -> dict:
+    """
+    Sector-only inference.
+    Returns calibrated probability and formatted percent for a given sector_std.
+    """
+    return _predict_from_pkg(str(sector).strip(), "sector_std", sector_pkg)
 
 # ---------------------------------------------------------------------------
 # Artifact persistence
 # ---------------------------------------------------------------------------
-
-def save_artifacts(model_pkg: dict, out_dir: str = ARTIFACTS_DIR) -> None:
+def save_artifacts(model_pkg: dict, model_type: str = "country", out_dir: str = ARTIFACTS_DIR) -> None:
     os.makedirs(out_dir, exist_ok=True)
+    suffix = model_type
 
-    # Model + scaler
-    joblib.dump(model_pkg["model"],  os.path.join(out_dir, "model.pkl"))
-    joblib.dump(model_pkg["scaler"], os.path.join(out_dir, "scaler.pkl"))
+    joblib.dump(model_pkg["model"], os.path.join(out_dir, f"model_{suffix}.pkl"))
+    joblib.dump(model_pkg["scaler"], os.path.join(out_dir, f"scaler_{suffix}.pkl"))
 
-    # Feature panel (for lookup)
-    panel = model_pkg["feature_panel"]
-    panel.to_csv(os.path.join(out_dir, "feature_panel.csv"), index=False)
+    model_pkg["feature_panel"].to_csv(os.path.join(out_dir, f"feature_panel_{suffix}.csv"), index=False)
 
-    # Metadata
-    meta = {k: v for k, v in model_pkg.items()
-            if k not in ("model", "scaler", "feature_panel")}
-    # Convert ndarray to list for JSON
-    if meta.get("weights") is not None and not isinstance(meta["weights"], dict):
-        meta["weights"] = meta["weights"].tolist()
-    with open(os.path.join(out_dir, "model_meta.json"), "w") as f:
-        json.dump(meta, f, default=str, indent=2)
+    schema = {k: v for k, v in model_pkg.items() if k not in ("model", "scaler", "feature_panel")}
+    with open(os.path.join(out_dir, f"feature_schema_{suffix}.json"), "w") as f:
+        json.dump(schema, f, default=str, indent=2)
 
-    print(f"[save_artifacts] Artifacts saved to: {out_dir}")
+    print(f"[save_artifacts] {suffix} artifacts -> {out_dir}")
 
 
-def load_artifacts(out_dir: str = ARTIFACTS_DIR) -> dict:
-    model  = joblib.load(os.path.join(out_dir, "model.pkl"))
-    scaler = joblib.load(os.path.join(out_dir, "scaler.pkl"))
-    panel  = pd.read_csv(os.path.join(out_dir, "feature_panel.csv"),
-                         parse_dates=["month_start"])
-    with open(os.path.join(out_dir, "model_meta.json")) as f:
-        meta = json.load(f)
+def save_metrics(metrics: dict, out_dir: str = ARTIFACTS_DIR) -> None:
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "metrics.json"), "w") as f:
+        json.dump(metrics, f, default=str, indent=2)
+    print(f"[save_metrics] metrics.json -> {out_dir}")
+    
+def _clamp01(x: float, hi: float = 0.99) -> float:
+    return float(max(0.0, min(hi, x)))
 
-    # Restore weights as dict if it was saved as list
-    if isinstance(meta.get("weights"), list):
-        meta["weights"] = {meta["num_cols"][i]: meta["weights"][i]
-                           for i in range(len(meta["weights"]))}
+def apply_country_multiplier(prob: float, country: str, multipliers: dict) -> tuple[float, float]:
+    """
+    Returns (scaled_prob, multiplier_used)
+    """
+    if multipliers is None:
+        return prob, 1.0
+    key = str(country).strip().upper()
+    m = float(multipliers.get(key, 1.0))
+    return _clamp01(prob * m), m
 
-    meta["model"]          = model
-    meta["scaler"]         = scaler
-    meta["feature_panel"]  = panel
-    return meta
+def predict_sector_scaled(
+    country: str,
+    sector: str,
+    sector_pkg: dict,
+    country_multipliers: dict,
+) -> dict:
+    """
+    Sector probability scaled by a country multiplier in [0.5, 2.0].
+    """
+    s_res = _predict_from_pkg(str(sector).strip(), "sector_std", sector_pkg)
+    p = float(s_res.get("tariff_risk_prob", 0.0))
+    p2, m = apply_country_multiplier(p, country, country_multipliers)
+
+    return {
+        "country": country,
+        "sector": sector,
+        "base_sector_prob": round(p, 4),
+        "country_multiplier": round(m, 4),
+        "tariff_risk_prob": round(p2, 4),
+        "tariff_risk_score": round(p2 * 100, 2),
+        "tariff_risk_pct": f"{round(p2 * 100, 1)}%",
+        "sector_model": s_res,
+    }

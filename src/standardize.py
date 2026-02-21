@@ -77,6 +77,17 @@ def normalize_country(name: str) -> str:
     return COUNTRY_ALIASES.get(clean, clean)
 
 
+def normalize_with_map(name: str, std_map: dict) -> str:
+    """
+    Normalize a country name to country_std.
+    Applies normalize_country() first, then looks up the result in std_map
+    (keyed by uppercase country_raw).  Falls back to the normalize_country()
+    result if no entry is found in the map.
+    """
+    normalized = normalize_country(name)
+    return std_map.get(normalized, normalized)
+
+
 # ---------------------------------------------------------------------------
 # Sector keywords: key = substring to match (lowercase), value = sector label
 # ---------------------------------------------------------------------------
@@ -138,3 +149,31 @@ def derive_sector(target_text: str) -> str:
         if kw in t:
             return sector
     return "General"
+
+
+# ---------------------------------------------------------------------------
+# Sector normalization: tariff-tracker sector_std -> canonical label
+# ---------------------------------------------------------------------------
+_SECTOR_STD_TO_LABEL: dict[str, str] = {
+    "GENERAL":         "General",
+    "OTHER":           "General",
+    "STEEL_ALUMINUM":  "Steel & Aluminum",
+    "AUTOMOTIVE":      "Automotive",
+    "ENERGY":          "Energy",
+    "MARITIME":        "Maritime",
+    "AEROSPACE":       "Aerospace",
+    "AGRICULTURE":     "Agriculture",
+    "METALS":          "Metals",
+    "LUMBER":          "Lumber",
+    "MINERALS":        "Minerals",
+    "SEMICONDUCTORS":  "Semiconductor",
+    "PHARMACEUTICALS": "Pharmaceutical",
+    "TEXTILES":        "Textiles",
+}
+
+
+def normalize_sector(sector_std: str) -> str:
+    """Map tariff tracker's UPPERCASE sector_std to the canonical sector label."""
+    if not isinstance(sector_std, str):
+        return "General"
+    return _SECTOR_STD_TO_LABEL.get(sector_std.strip().upper(), "General")

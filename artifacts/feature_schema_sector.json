@@ -1,0 +1,129 @@
+{
+  "mode": "probability",
+  "num_cols": [
+    "gscpi",
+    "gscpi_3m_mean",
+    "month_of_year",
+    "months_since_start",
+    "tariff_count_sector_3m",
+    "tariff_count_sector_6m",
+    "tariff_count_sector_12m",
+    "months_since_last_tariff_sector",
+    "authority_count_12m_Section_232",
+    "authority_count_12m_IEEPA"
+  ],
+  "all_cols": [
+    "sector_std",
+    "gscpi",
+    "gscpi_3m_mean",
+    "month_of_year",
+    "months_since_start",
+    "tariff_count_sector_3m",
+    "tariff_count_sector_6m",
+    "tariff_count_sector_12m",
+    "months_since_last_tariff_sector",
+    "authority_count_12m_Section_232",
+    "authority_count_12m_IEEPA"
+  ],
+  "cat_cols": [
+    "sector_std"
+  ],
+  "feature_cols": [
+    "gscpi",
+    "gscpi_3m_mean",
+    "month_of_year",
+    "months_since_start",
+    "tariff_count_sector_3m",
+    "tariff_count_sector_6m",
+    "tariff_count_sector_12m",
+    "months_since_last_tariff_sector",
+    "authority_count_12m_Section_232",
+    "authority_count_12m_IEEPA"
+  ],
+  "fill_values": {
+    "gscpi": -0.08,
+    "gscpi_3m_mean": -0.08666666666666667,
+    "month_of_year": 7.0,
+    "months_since_start": 6.0,
+    "tariff_count_sector_3m": 0.0,
+    "tariff_count_sector_6m": 0.0,
+    "tariff_count_sector_12m": 1.0,
+    "months_since_last_tariff_sector": 6.01,
+    "authority_count_12m_Section_232": 0.0,
+    "authority_count_12m_IEEPA": 0.0
+  },
+  "fit_on_scaled_num": true,
+  "pr_auc": 0.4909,
+  "roc_auc": 0.6184,
+  "baseline_pr_auc": 0.3217,
+  "n_positive": 46,
+  "n_total": 143,
+  "weights": null,
+  "feat_importances": {
+    "gscpi": 0.12493957282701534,
+    "gscpi_3m_mean": 0.2655873756496473,
+    "month_of_year": 0.7038146309424003,
+    "months_since_start": 0.08998543911903224,
+    "tariff_count_sector_3m": 0.7767140363754365,
+    "tariff_count_sector_6m": 0.5755253606020723,
+    "tariff_count_sector_12m": 0.867283259090181,
+    "months_since_last_tariff_sector": 0.4045875116816535,
+    "authority_count_12m_Section_232": 0.9314246817247871,
+    "authority_count_12m_IEEPA": 0.0640093870278931
+  },
+  "fold_metrics": [
+    {
+      "train_end": "2025-02-01",
+      "val_start": "2025-04-01",
+      "val_end": "2025-06-01",
+      "n_train": 44,
+      "n_val": 33,
+      "n_pos_train": 19,
+      "n_pos_val": 13,
+      "n_neg_val": 20,
+      "pr_auc": 0.5276,
+      "roc_auc": 0.5192,
+      "baseline_pr_auc": 0.3939
+    },
+    {
+      "train_end": "2025-03-01",
+      "val_start": "2025-05-01",
+      "val_end": "2025-07-01",
+      "n_train": 55,
+      "n_val": 33,
+      "n_pos_train": 26,
+      "n_pos_val": 10,
+      "n_neg_val": 23,
+      "pr_auc": 0.3987,
+      "roc_auc": 0.5109,
+      "baseline_pr_auc": 0.303
+    },
+    {
+      "train_end": "2025-04-01",
+      "val_start": "2025-06-01",
+      "val_end": "2025-08-01",
+      "n_train": 66,
+      "n_val": 33,
+      "n_pos_train": 32,
+      "n_pos_val": 8,
+      "n_neg_val": 25,
+      "pr_auc": 0.4076,
+      "roc_auc": 0.665,
+      "baseline_pr_auc": 0.2424
+    },
+    {
+      "train_end": "2025-05-01",
+      "val_start": "2025-07-01",
+      "val_end": "2025-09-01",
+      "n_train": 77,
+      "n_val": 33,
+      "n_pos_train": 35,
+      "n_pos_val": 5,
+      "n_neg_val": 28,
+      "pr_auc": 0.6299,
+      "roc_auc": 0.7786,
+      "baseline_pr_auc": 0.1515
+    }
+  ],
+  "model_label": "sector"
+}

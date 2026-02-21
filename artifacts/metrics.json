@@ -1,0 +1,22 @@
+{
+  "sector_model": {
+    "mode": "probability",
+    "n_positive": 46,
+    "n_total": 143,
+    "baseline_pr_auc": 0.3217,
+    "pr_auc": 0.4909,
+    "roc_auc": 0.6184,
+    "feature_cols": [
+      "gscpi",
+      "gscpi_3m_mean",
+      "month_of_year",
+      "months_since_start",
+      "tariff_count_sector_3m",
+      "tariff_count_sector_6m",
+      "tariff_count_sector_12m",
+      "months_since_last_tariff_sector",
+      "authority_count_12m_Section_232",
+      "authority_count_12m_IEEPA"
+    ]
+  }
+}

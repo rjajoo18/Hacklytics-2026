@@ -1,13 +1,11 @@
 """
-End-to-end Tariff Risk Forecasting pipeline.
+End-to-end Tariff Risk Forecasting pipeline — Sector-Only Edition.
 
-Steps:
-  1. Load all raw CSV data
-  2. Build tariff events from the tracker
-  3. Build monthly (country, sector, month_start, y) panel
-  4. Engineer features
-  5. Train model (CatBoost / LogReg / heuristic depending on label count)
-  6. Save artifacts to artifacts/
+Sector Model: predicts P(sector-specific tariff action in next 3 months)
+              unit = (sector_std, month_start)
+
+Label: y = 1 if any tariff event (First announced) falls in [month_start, month_start + 3 months).
+Panel start: 2024-11-01 (data before this date is excluded from all datasets).
 
 Usage:
     python train.py
@@ -18,24 +16,53 @@ import sys
 import warnings
 
 warnings.filterwarnings("ignore")
-
-# Ensure project root is on sys.path
 sys.path.insert(0, os.path.dirname(__file__))
 
 import pandas as pd
 
 from src.data_loader import (
-    load_bilateral_trade,
-    load_forex,
     load_gscpi,
-    load_manufacturing,
-    load_political_risk,
-    load_unemployment,
     load_tariff_tracker,
 )
-from src.panel import build_tariff_events, build_monthly_panel, panel_stats
-from src.features import build_features
-from src.model import train, save_artifacts
+from src.country_multiplier import compute_country_multipliers, save_country_multipliers
+from src.panel import (
+    build_sector_events,
+    build_sector_panel,
+    panel_stats,
+    PANEL_START_DEFAULT,
+    MASS_ROLLOUT_THRESHOLD,
+)
+from src.features import (
+    build_sector_features,
+    SECTOR_CAT_COLS,
+)
+from src.model import (
+    train,
+    save_artifacts,
+    save_metrics,
+    predict_sector,
+)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _fill_rate_report(df: pd.DataFrame, feat_cols: list, label: str) -> list:
+    present = [c for c in feat_cols if c in df.columns]
+    fill = (df[present].notna().mean() * 100).round(1)
+    print(f"\n  [{label}] Feature fill-rate:")
+    for col, pct in fill.sort_values(ascending=False).items():
+        flag = "  [LOW <20%]" if pct < 20.0 else ""
+        print(f"    {col}: {pct:.1f}%{flag}")
+    low = [c for c in present if fill.get(c, 0) < 20.0]
+    return low
+
+
+# ---------------------------------------------------------------------------
+# Pipeline
+# ---------------------------------------------------------------------------
+
+PANEL_START = PANEL_START_DEFAULT  # 2024-11-01
 
 
 def run_pipeline(verbose: bool = True) -> None:
@@ -50,109 +77,130 @@ def run_pipeline(verbose: bool = True) -> None:
     # ------------------------------------------------------------------
     log("\n=== Step 1: Loading raw data ===")
 
-    log("  bilateral_trade_deficits...")
-    bilateral_df = load_bilateral_trade()
-    log(f"    => {len(bilateral_df):,} rows, {bilateral_df['country'].nunique()} countries")
-
-    log("  forex_data...")
-    forex_df = load_forex()
-    log(f"    => {len(forex_df):,} rows, {forex_df['country'].nunique() if not forex_df.empty else 0} countries")
-
     log("  GSCPI...")
     gscpi_df = load_gscpi()
-    log(f"    => {len(gscpi_df):,} monthly observations ({gscpi_df['month'].min().date()} - {gscpi_df['month'].max().date()})")
-
-    log("  manufacturing_data...")
-    manufacturing_df = load_manufacturing()
-    log(f"    => {len(manufacturing_df):,} rows, {manufacturing_df['country'].nunique() if not manufacturing_df.empty else 0} countries")
-
-    log("  political_risk_data...")
-    polrisk_df = load_political_risk()
-    log(f"    => {len(polrisk_df):,} entity-month observations")
-
-    log("  unemployment...")
-    unemployment_df = load_unemployment()
-    log(f"    => {len(unemployment_df):,} monthly observations")
+    gscpi_df = gscpi_df[gscpi_df["month"] >= PANEL_START].reset_index(drop=True)
+    log(f"    => {len(gscpi_df):,} monthly obs ({gscpi_df['month'].min().date()} - {gscpi_df['month'].max().date()})")
 
     log("  tariff_tracker...")
     tariff_df = load_tariff_tracker()
-    log(f"    => {len(tariff_df):,} tariff actions, "
-        f"{tariff_df['geography'].nunique()} geographies")
-
+    tariff_df = tariff_df[
+        tariff_df["event_date"].notna() & (tariff_df["event_date"] >= PANEL_START)
+    ].reset_index(drop=True)
+    log(f"    => {len(tariff_df):,} actions (>= {PANEL_START.date()}) | "
+        f"target_types: {dict(tariff_df['target_type'].value_counts())}")
+    log(f"       sector_std: {dict(tariff_df['sector_std'].value_counts())}")
+        # Country multipliers (policy-intensity proxy)
+    country_mult = compute_country_multipliers(tariff_df)
+    save_country_multipliers(country_mult, os.path.join("artifacts", "country_multipliers.json"))
+    log(f"  country multipliers saved: {len(country_mult)} countries -> artifacts/country_multipliers.json")
     # ------------------------------------------------------------------
     # Step 2: Build tariff events
     # ------------------------------------------------------------------
     log("\n=== Step 2: Building tariff events ===")
-    tariff_events = build_tariff_events(tariff_df)
-    log(f"  => {len(tariff_events):,} unique (country, sector, event_date) events")
-    log(f"  => {tariff_events['country'].nunique()} countries, "
-        f"{tariff_events['sector'].nunique()} sectors")
-    log(f"  Sector distribution:\n{tariff_events['sector'].value_counts().to_string()}")
+    sector_events = build_sector_events(tariff_df)
+
+    log(f"  Sector events: {len(sector_events)} unique (sector_std, event_date)")
+    log(f"    mass-rollout flagged: {sector_events['is_mass_rollout'].sum()} "
+        f"(threshold={MASS_ROLLOUT_THRESHOLD})")
 
     # ------------------------------------------------------------------
-    # Step 3: Build monthly panel
+    # Step 3: Build monthly panels
     # ------------------------------------------------------------------
-    log("\n=== Step 3: Building monthly panel ===")
-    panel = build_monthly_panel(
-        tariff_events,
-        feature_start=pd.Timestamp("2020-01-01"),
-    )
-    stats = panel_stats(panel)
-    log(f"  Panel shape: {panel.shape}")
-    log(f"  Stats: {stats}")
+    log("\n=== Step 3: Building monthly panels ===")
+    sector_panel = build_sector_panel(sector_events, feature_start=PANEL_START)
+    log(f"  Sector panel: {sector_panel.shape}")
+    log(f"    {panel_stats(sector_panel)}")
 
     # ------------------------------------------------------------------
     # Step 4: Feature engineering
     # ------------------------------------------------------------------
     log("\n=== Step 4: Feature engineering ===")
-    feature_df = build_features(
-        panel,
-        bilateral_df,
-        forex_df,
+    log("  Building sector features (gscpi + history)...")
+    sector_feat_df, sector_num_cols, _ = build_sector_features(
+        sector_panel,
+        sector_events,
         gscpi_df,
-        manufacturing_df,
-        polrisk_df,
-        unemployment_df,
     )
-    log(f"  Feature matrix shape: {feature_df.shape}")
-    non_null_pct = (feature_df.notna().mean() * 100).round(1)
-    log("  Feature fill-rate (%):\n" +
-        "\n".join(f"    {c}: {non_null_pct[c]:.1f}%"
-                  for c in non_null_pct.index if c in non_null_pct.index))
+    log(f"    => {sector_feat_df.shape} | {len(sector_num_cols)} numeric cols")
 
     # ------------------------------------------------------------------
-    # Step 5: Train model
+    # Step 5: Fill-rate check
     # ------------------------------------------------------------------
-    log("\n=== Step 5: Training model ===")
-    model_pkg = train(feature_df)
-    log(f"  Mode: {model_pkg['mode']}")
-    if model_pkg.get("pr_auc") is not None:
-        log(f"  PR-AUC: {model_pkg['pr_auc']:.4f}")
+    log("\n=== Step 5: Fill-rate check ===")
+    s_low = _fill_rate_report(sector_feat_df, sector_num_cols, "Sector")
+    if s_low:
+        log(f"\n  Dropping {len(s_low)} sector feature(s) with <20% fill: {s_low}")
+        sector_feat_df = sector_feat_df.drop(columns=s_low, errors="ignore")
+        sector_num_cols = [c for c in sector_num_cols if c not in s_low]
+    else:
+        log("\n  All sector features above 20% fill threshold.")
 
     # ------------------------------------------------------------------
-    # Step 6: Save artifacts
+    # Step 6: Train model
     # ------------------------------------------------------------------
-    log("\n=== Step 6: Saving artifacts ===")
-    save_artifacts(model_pkg)
+    log("\n=== Step 6: Training Sector Model ===")
+    sector_pkg = train(
+        sector_feat_df,
+        feature_cols=sector_num_cols,
+        cat_cols=SECTOR_CAT_COLS,
+        model_label="sector",
+    )
+    log(f"  Mode: {sector_pkg['mode']}")
+    if sector_pkg.get("fold_metrics"):
+        log(f"  Walk-forward CV ({len(sector_pkg['fold_metrics'])} valid folds):")
+        for fold in sector_pkg["fold_metrics"]:
+            log(f"    train_end={fold['train_end']}  "
+                f"val=[{fold['val_start']}..{fold['val_end']}]  "
+                f"PR-AUC={fold['pr_auc']:.4f} (base={fold['baseline_pr_auc']:.4f})  "
+                f"ROC-AUC={fold['roc_auc']:.4f}")
+    if sector_pkg.get("pr_auc") is not None:
+        log(f"  Mean PR-AUC:  {sector_pkg['pr_auc']:.4f}  "
+            f"(baseline={sector_pkg['baseline_pr_auc']:.4f})")
+        log(f"  Mean ROC-AUC: {sector_pkg['roc_auc']:.4f}")
+
+    # ------------------------------------------------------------------
+    # Step 7: Save artifacts
+    # ------------------------------------------------------------------
+    log("\n=== Step 7: Saving artifacts ===")
+    save_artifacts(sector_pkg, model_type="sector")
+
+    metrics = {
+        "sector_model": {
+            "mode":            sector_pkg["mode"],
+            "n_positive":      sector_pkg["n_positive"],
+            "n_total":         sector_pkg["n_total"],
+            "baseline_pr_auc": sector_pkg["baseline_pr_auc"],
+            "pr_auc":          sector_pkg.get("pr_auc"),
+            "roc_auc":         sector_pkg.get("roc_auc"),
+            "feature_cols":    sector_num_cols,
+        }
+    }
+    save_metrics(metrics)
     log("  Done!")
 
     # ------------------------------------------------------------------
-    # Quick smoke test
+    # Step 8: Smoke test
     # ------------------------------------------------------------------
-    log("\n=== Quick smoke test ===")
-    from src.model import predict_single
-    test_cases = [
-        ("CHINA",  "Semiconductor"),
-        ("CANADA", "General"),
-        ("EU",     "Automotive"),
-        ("GLOBAL", "Steel & Aluminum"),
-        ("INDIA",  "General"),
+    log("\n=== Step 8: Smoke test ===")
+
+    test_sectors = [
+        "Automotive",
+        "Steel & Aluminum",
+        "Energy",
+        "Maritime",
+        "Aerospace",
     ]
-    for country, sector in test_cases:
-        r = predict_single(country, sector, model_pkg)
-        prob_str = (f", prob={r['tariff_risk_prob']:.3f}"
-                    if r.get("tariff_risk_prob") is not None else "")
-        log(f"  {country:25s} / {sector:20s} => score={r['tariff_risk_score']:.1f}{prob_str}")
+
+    for sector in test_sectors:
+        r = predict_sector(sector, sector_pkg)
+        log(f"\n  {sector:20s}  score={r['tariff_risk_score']:6.1f}  "
+            f"prob={r['tariff_risk_pct']:>6s}  [sector_only]")
+        if r.get("top_drivers"):
+            log("    Sector drivers:")
+            for d in r["top_drivers"][:3]:
+                log(f"      {d.get('feature','?'):40s}  "
+                    f"val={d.get('value', d.get('importance','?'))}")
 
 
 if __name__ == "__main__":
