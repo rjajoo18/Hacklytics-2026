@@ -29,7 +29,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.ensemble import HistGradientBoostingClassifier
 
-from ml.src.features import FEATURE_COLS, CAT_FEATURE_COLS
+from .features import FEATURE_COLS, CAT_FEATURE_COLS
 
 warnings.filterwarnings("ignore")
 

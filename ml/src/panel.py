@@ -22,7 +22,7 @@ Mass-rollout handling (IMPORTANT):
 import pandas as pd
 import numpy as np
 
-from ml.src.standardize import derive_sector
+from .standardize import derive_sector
 
 # ---------------------------------------------------------------------------
 # Constants
