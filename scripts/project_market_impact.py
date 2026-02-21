@@ -578,21 +578,33 @@ def plot_single_sector(
     out_path: str,
 ) -> None:
     """
-    One plot per sector: thin stock lines (normalized to 100 at day 0),
-    bold sector-average line.
+    One plot per sector: each stock gets its own color and legend label
+    (impacted line labeled by ticker; baseline shown in matching color, lighter).
+    Bold dashed lines show the sector average.
     """
-    fig, ax = plt.subplots(figsize=(14, 7))
+    fig, ax = plt.subplots(figsize=(15, 7))
+
+    # One distinct color per stock from tab10 colormap
+    cmap = plt.get_cmap("tab10")
+    ticker_list = list(stocks.keys())
+    colors = [cmap(i % 10) for i in range(len(ticker_list))]
 
     base_norms, imp_norms = [], []
 
-    for ticker, paths in stocks.items():
+    for color, ticker in zip(colors, ticker_list):
+        paths = stocks[ticker]
         b0 = paths["baseline"][0]
         if b0 <= 0:
             continue
-        bn = paths["baseline"] / b0 * 100.0
-        in_ = paths["impacted"] / b0 * 100.0
-        ax.plot(dates, bn,  color="#1565C0", lw=0.7, alpha=0.35, zorder=2)
-        ax.plot(dates, in_, color="#C62828", lw=0.7, alpha=0.35, zorder=2)
+        bn  = paths["baseline"] / b0 * 100.0
+        in_ = paths["impacted"]  / b0 * 100.0
+
+        # Baseline: same color, thin, slightly transparent, no label (avoid legend clutter)
+        ax.plot(dates, bn,  color=color, lw=1.0, alpha=0.35, linestyle="-",  zorder=2)
+        # Impacted: same color, solid, labeled with ticker
+        ax.plot(dates, in_, color=color, lw=1.5, alpha=0.85, linestyle="--",
+                label=ticker, zorder=3)
+
         base_norms.append(bn)
         imp_norms.append(in_)
 
@@ -600,11 +612,12 @@ def plot_single_sector(
     if base_norms:
         avg_b = np.mean(base_norms, axis=0)
         avg_i = np.mean(imp_norms,  axis=0)
-        ax.plot(dates, avg_b, color="#0D47A1", lw=3.0, zorder=4,
-                label=f"Sector-Avg Baseline ({n_stocks} stocks)")
-        ax.plot(dates, avg_i, color="#B71C1C", lw=3.0, linestyle="--", zorder=4,
-                label=f"Sector-Avg Impacted (sector shock: {impact_pct:+.3f}%)")
-        ax.fill_between(dates, avg_b, avg_i, alpha=0.18,
+        # Bold sector averages in black so they stand out from the colored stock lines
+        ax.plot(dates, avg_b, color="black", lw=2.8, zorder=5,
+                label=f"AVG Baseline ({n_stocks} stocks)")
+        ax.plot(dates, avg_i, color="black", lw=2.8, linestyle="--", zorder=5,
+                label=f"AVG Impacted (sector: {impact_pct:+.3f}%)")
+        ax.fill_between(dates, avg_b, avg_i, alpha=0.10,
                         color="red" if impact_pct < 0 else "green")
 
     ax.axhline(100.0, color="gray", lw=0.6, linestyle=":", alpha=0.6)
@@ -612,15 +625,17 @@ def plot_single_sector(
     ax.set_title(
         f"Sector: {sector_clean}  --  Top {n_stocks} Representative Stocks\n"
         f"90-Day Projection  |  Sector Tariff Impact: {impact_pct:+.3f}%\n"
-        "(Thin lines = individual stocks, Bold = sector average; normalized to 100 at Day 0)",
-        fontsize=11,
+        "Dashed = tariff-impacted path (labeled by ticker)  |  "
+        "Solid = baseline  |  Black bold = sector average  |  Normalized to 100 at Day 0",
+        fontsize=10,
     )
     ax.set_xlabel("Date")
     ax.set_ylabel("Normalized Price (Day 0 = 100)")
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=2))
     plt.xticks(rotation=35, ha="right")
-    ax.legend(fontsize=9)
+    # Legend: put ticker labels in 2 columns to keep it compact
+    ax.legend(fontsize=8, ncol=2, loc="upper left", framealpha=0.85)
     ax.grid(True, alpha=0.2)
 
     fig.tight_layout()
@@ -752,13 +767,21 @@ def save_sector_csvs(
                 "sector_total_impact_pct": round(imp_pct, 6),
             })
 
-        # Per-sector stock CSV
-        stock_dict: dict = {"date": dates.date}
+        # Per-sector stock CSV -- long format: one row per (date, ticker)
+        # Each row maps directly to a labeled line in the sector plot.
+        stock_rows = []
         for ticker, paths in stocks.items():
-            stock_dict[f"{ticker}_baseline"] = np.round(paths["baseline"], 4)
-            stock_dict[f"{ticker}_impacted"] = np.round(paths["impacted"], 4)
-        csv_path = sectors_dir / f"{sector.lower()}_top50.csv"
-        pd.DataFrame(stock_dict).to_csv(csv_path, index=False)
+            for date, b, i in zip(dates.date, paths["baseline"], paths["impacted"]):
+                stock_rows.append({
+                    "date":       date,
+                    "sector":     sector,
+                    "ticker":     ticker,
+                    "baseline":   round(float(b), 4),
+                    "impacted":   round(float(i), 4),
+                    "sector_total_impact_pct": round(imp_pct, 6),
+                })
+        csv_path = sectors_dir / f"{sector.lower()}_top10.csv"
+        pd.DataFrame(stock_rows).to_csv(csv_path, index=False)
 
     if sector_rows:
         p = Path(out_dir) / "sector_paths.csv"
@@ -897,6 +920,7 @@ def main() -> None:
         sector    = row["Sector"]
         imp_pct   = float(row["sector_impact_pct"])
         _, tickers = resolve_sector_tickers(sector)
+        tickers = tickers[:10]   # top 10 per sector
 
         print(f"\n  [{sector}]  impact={imp_pct:+.4f}%  tickers={len(tickers)}")
 
