@@ -29,7 +29,7 @@ async def get_country_sectors(
     """
     resp = (
         supabase.table("country_tariff_prob")
-        .select("sector, probability_percent")
+        .select("sector, tariff_risk_prob")
         .eq("country", country)
         .order("sector", desc=False)
         .execute()
@@ -47,7 +47,8 @@ async def get_country_sectors(
     sectors = [
         SectorProbability(
             sector=row["sector"],
-            probability_percent=float(row["probability_percent"]),
+            # tariff_risk_prob is stored as 0–1 float; convert to percentage
+            probability_percent=round(float(row["tariff_risk_prob"]) * 100, 2),
         )
         for row in resp.data
     ]

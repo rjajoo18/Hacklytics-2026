@@ -12,23 +12,26 @@ GET /api/dashboard/graph?graph_type=...&sector=...
     sector:     required only when graph_type == "top10_sector_stocks"
 
 ---
-Database assumptions
---------------------
+Actual Supabase schema (verified against live DB)
+--------------------------------------------------
 Table: country_tariff_prob
-  Columns: country (text), sector (text), probability_percent (numeric)
+  id, country, sector, sector_base_prob, country_multiplier,
+  tariff_risk_prob (float 0-1), tariff_risk_pct (text "21.70%")
 
 Table: Index_paths
-  Expected wide format: date (date/text) | nasdaq (numeric) | sp500 (numeric) | dowjones (numeric)
-  If your table has a different layout (e.g. a single "index_name" / "price" pair) update
-  _INDEX_COLUMN_MAP and the query in _fetch_index_series() accordingly.
+  id, date, index (text: "nasdaq"|"sp500"|"dow"), baseline_price,
+  impacted_price, total_impact_pct
+  -> long format; filter by `index` column, use `impacted_price`
 
-Tables: {Sector}_top10  (e.g. Technology_top10, Steel_aluminum_top10)
-  Expected wide format: date (date/text) | <ticker1> (numeric) | <ticker2> (numeric) | ...
-  Every non-date column is treated as a ticker.
+Tables: {Sector}_top10  (e.g. Energy_top10, Agriculture_top10, Steel_aluminum_top10)
+  id, date, sector, ticker, baseline_price, impacted_price,
+  normalized_impacted_price, sector_total_impact_pct
+  -> long format; group by ticker, use `impacted_price`
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date as _date
 from typing import Optional
 
@@ -48,27 +51,26 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-# Maps graph_type -> column name in the Index_paths table.
-# Adjust column names here if they differ in your Supabase schema.
-_INDEX_COLUMN_MAP: dict[str, str] = {
+# Maps graph_type (frontend name) -> value stored in Index_paths.index column.
+_INDEX_VALUE_MAP: dict[str, str] = {
     "nasdaq":   "nasdaq",
     "sp500":    "sp500",
-    "dowjones": "dowjones",
+    "dowjones": "dow",   # DB stores "dow", not "dowjones"
 }
 
-_VALID_GRAPH_TYPES = set(_INDEX_COLUMN_MAP.keys()) | {"top10_sector_stocks"}
+_VALID_GRAPH_TYPES = set(_INDEX_VALUE_MAP.keys()) | {"top10_sector_stocks"}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _normalize_date(raw: object) -> str:
-    """Return the first 10 chars of a date string: 'YYYY-MM-DD'."""
+    """Return the first 10 chars of any date value: 'YYYY-MM-DD'."""
     return str(raw)[:10]
 
 
 def _sample_every_14_days(points: list[DatePricePoint]) -> list[DatePricePoint]:
     """
-    Down-sample a list that is already sorted by date ascending,
+    Down-sample a list already sorted by date ascending,
     keeping one point every >= 14 calendar days.
     """
     if not points:
@@ -90,14 +92,15 @@ def _sector_to_table_name(sector: str) -> str:
     """
     Convert a sector display name to the corresponding Supabase table name.
 
-    Rules:
-      "Steel and aluminum"  -> "Steel_aluminum_top10"   (special case)
-      Everything else       -> capitalize first letter, spaces -> underscores,
-                               append "_top10"
+    Special case:
+      "Steel and aluminum" / "Steel & aluminum"  -> "Steel_aluminum_top10"
+
+    All other sectors:
+      Capitalise first letter, replace spaces with underscores, append "_top10".
 
     Examples:
-      "Technology"          -> "Technology_top10"
-      "Consumer Discretionary" -> "Consumer_Discretionary_top10"
+      "Energy"      -> "Energy_top10"
+      "Agriculture" -> "Agriculture_top10"
     """
     if sector.lower() in ("steel and aluminum", "steel & aluminum"):
         return "Steel_aluminum_top10"
@@ -106,47 +109,23 @@ def _sector_to_table_name(sector: str) -> str:
     if not cleaned:
         raise ValueError("sector must not be empty")
 
-    table = cleaned[0].upper() + cleaned[1:]   # capitalise first letter
+    table = cleaned[0].upper() + cleaned[1:]
     table = table.replace(" ", "_")
     return f"{table}_top10"
-
-
-def _build_date_price_points(
-    rows: list[dict],
-    date_col: str,
-    price_col: str,
-) -> list[DatePricePoint]:
-    """Extract (date, price) pairs, skipping rows with null prices."""
-    points: list[DatePricePoint] = []
-    for row in rows:
-        raw_date = row.get(date_col)
-        price_val = row.get(price_col)
-        if raw_date is None or price_val is None:
-            continue
-        points.append(DatePricePoint(date=_normalize_date(raw_date), price=float(price_val)))
-    return points
-
-
-def _find_date_column(columns: list[str]) -> str | None:
-    """Return the date column name, case-insensitively."""
-    for col in columns:
-        if col.lower() == "date":
-            return col
-    return None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/tariff-prob", response_model=TariffProbResponse)
 async def get_tariff_probability(
-    country: str = Query(..., description="Country name (e.g. 'China')"),
-    sector: str  = Query(..., description="Sector name (e.g. 'Technology')"),
+    country: str     = Query(..., description="Country name (e.g. 'CHINA')"),
+    sector: str      = Query(..., description="Sector name (e.g. 'Energy')"),
     supabase: Client = Depends(get_supabase),
 ) -> TariffProbResponse:
     """Return the tariff probability % for a given (country, sector) pair."""
     resp = (
         supabase.table("country_tariff_prob")
-        .select("country, sector, probability_percent")
+        .select("country, sector, tariff_risk_prob")
         .eq("country", country)
         .eq("sector", sector)
         .limit(1)
@@ -166,7 +145,8 @@ async def get_tariff_probability(
     return TariffProbResponse(
         country=row["country"],
         sector=row["sector"],
-        probability_percent=float(row["probability_percent"]),
+        # tariff_risk_prob is stored as 0–1 float; convert to percentage
+        probability_percent=round(float(row["tariff_risk_prob"]) * 100, 2),
     )
 
 
@@ -179,8 +159,8 @@ async def get_graph_data(
     """
     Return time-series graph data sampled at 2-week intervals.
 
-    - For nasdaq / sp500 / dowjones: queries Index_paths, returns {graph_type, points[]}.
-    - For top10_sector_stocks:       queries {Sector}_top10, returns {sector, series[]}.
+    - nasdaq / sp500 / dowjones  -> { graph_type, points: [{date, price}] }
+    - top10_sector_stocks        -> { sector, series: [{ticker, points}] }
     """
     if graph_type not in _VALID_GRAPH_TYPES:
         raise HTTPException(
@@ -205,12 +185,16 @@ async def get_graph_data(
 # ── Private fetchers ──────────────────────────────────────────────────────────
 
 async def _fetch_index_series(graph_type: str, supabase: Client) -> IndexGraphResponse:
-    """Fetch a single index column from Index_paths and down-sample."""
-    price_col = _INDEX_COLUMN_MAP[graph_type]
+    """
+    Query Index_paths (long format) filtered by the `index` column.
+    Returns impacted_price sampled every 14 days.
+    """
+    index_value = _INDEX_VALUE_MAP[graph_type]
 
     resp = (
         supabase.table("Index_paths")
-        .select(f"date, {price_col}")
+        .select("date, impacted_price")
+        .eq("index", index_value)
         .order("date", desc=False)
         .execute()
     )
@@ -220,15 +204,24 @@ async def _fetch_index_series(graph_type: str, supabase: Client) -> IndexGraphRe
             status_code=404,
             detail=(
                 f"No data found in Index_paths for graph_type='{graph_type}' "
-                f"(queried column: '{price_col}')."
+                f"(index='{index_value}')."
             ),
         )
 
-    raw_points = _build_date_price_points(resp.data, "date", price_col)
+    raw_points: list[DatePricePoint] = []
+    for row in resp.data:
+        raw_date = row.get("date")
+        price_val = row.get("impacted_price")
+        if raw_date is None or price_val is None:
+            continue
+        raw_points.append(
+            DatePricePoint(date=_normalize_date(raw_date), price=float(price_val))
+        )
+
     if not raw_points:
         raise HTTPException(
             status_code=404,
-            detail=f"All rows in Index_paths have null values for column '{price_col}'.",
+            detail=f"All rows for index='{index_value}' have null impacted_price.",
         )
 
     return IndexGraphResponse(
@@ -239,11 +232,8 @@ async def _fetch_index_series(graph_type: str, supabase: Client) -> IndexGraphRe
 
 async def _fetch_sector_top10(sector: str, supabase: Client) -> SectorTop10Response:
     """
-    Fetch all rows from the sector's top-10 table.
-
-    The table is expected to be in wide format:
-        date  | AAPL  | MSFT  | GOOGL | ...
-    Every column except 'date' is treated as a ticker symbol.
+    Query a sector's top-10 table (long format: one row per ticker per date).
+    Groups rows by ticker, returns impacted_price sampled every 14 days.
     """
     try:
         table_name = _sector_to_table_name(sector)
@@ -253,7 +243,7 @@ async def _fetch_sector_top10(sector: str, supabase: Client) -> SectorTop10Respo
     try:
         resp = (
             supabase.table(table_name)
-            .select("*")
+            .select("date, ticker, impacted_price")
             .order("date", desc=False)
             .execute()
         )
@@ -272,31 +262,29 @@ async def _fetch_sector_top10(sector: str, supabase: Client) -> SectorTop10Respo
             detail=f"Table '{table_name}' exists but contains no rows.",
         )
 
-    # Identify the date column (case-insensitive)
-    all_cols = list(resp.data[0].keys())
-    date_col = _find_date_column(all_cols)
-    if date_col is None:
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"Table '{table_name}' has no 'date' column. "
-                f"Columns found: {all_cols}."
-            ),
+    # Group rows by ticker -> sorted list of DatePricePoints
+    ticker_map: dict[str, list[DatePricePoint]] = defaultdict(list)
+    for row in resp.data:
+        raw_date  = row.get("date")
+        ticker    = row.get("ticker")
+        price_val = row.get("impacted_price")
+        if raw_date is None or ticker is None or price_val is None:
+            continue
+        ticker_map[ticker].append(
+            DatePricePoint(date=_normalize_date(raw_date), price=float(price_val))
         )
 
-    ticker_cols = [c for c in all_cols if c != date_col]
-    if not ticker_cols:
+    if not ticker_map:
         raise HTTPException(
-            status_code=500,
-            detail=f"Table '{table_name}' has no ticker columns besides the date column.",
+            status_code=404,
+            detail=f"No valid (date, ticker, impacted_price) rows found in '{table_name}'.",
         )
 
-    # Build sorted raw points per ticker, then down-sample
-    series: list[TickerSeries] = []
-    for ticker in ticker_cols:
-        raw_points = _build_date_price_points(resp.data, date_col, ticker)
-        sampled = _sample_every_14_days(raw_points)
-        if sampled:
-            series.append(TickerSeries(ticker=ticker, points=sampled))
+    # Down-sample each ticker's series independently
+    series: list[TickerSeries] = [
+        TickerSeries(ticker=ticker, points=_sample_every_14_days(pts))
+        for ticker, pts in sorted(ticker_map.items())
+        if pts
+    ]
 
     return SectorTop10Response(sector=sector, series=series)
