@@ -1,7 +1,16 @@
-
-
+# Existing scraper dependencies
 requests
 beautifulsoup4
 lxml
-pandas
 python-dotenv
+
+# Data & ML pipeline
+pandas>=2.0
+numpy
+scikit-learn
+catboost
+joblib
+
+# API
+fastapi
+uvicorn[standard]
