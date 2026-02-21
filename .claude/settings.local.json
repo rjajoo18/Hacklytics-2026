@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(BASE=\"https://bsswslfjrgwpygprpykl.supabase.co/rest/v1\")",
+      "Bash(KEY=\"sb_publishable_0JL8YJaHqLi0gXh3ElArog_Jk8xtGov\")",
+      "Bash(__NEW_LINE_ff83427733888513__ for TABLE in \"Aerospace_top10\" \"Agriculture_top10\" \"Automotive_top10\" \"Energy_top10\" \"Index_paths\" \"Lumber_top10\" \"Maritime_top10\" \"Metals_top10\" \"Minerals_top10\" \"Pharmaceuticals_top10\" \"Steel_aluminum_top10\")",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(done)",
+      "Bash(GQL=\"https://bsswslfjrgwpygprpykl.supabase.co/graphql/v1\")",
+      "Bash(__NEW_LINE_0fb0a90233c0d679__ python3:*)"
+    ]
+  }
+}
