@@ -14,3 +14,7 @@ joblib
 # API
 fastapi
 uvicorn[standard]
+
+# Market projection pipeline
+yfinance>=0.2
+matplotlib>=3.7
