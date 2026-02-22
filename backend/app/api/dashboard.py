@@ -72,6 +72,14 @@ _UNIVERSE_INDEX_MAP: dict[str, str] = {
 
 _VALID_UNIVERSES = set(_UNIVERSE_INDEX_MAP.keys()) | {"sector_top10"}
 
+# Maps universe key -> column name in {Sector}_index tables.
+# Each sector index table has columns: date, SP500, DOW, NASDAQ
+_SECTOR_INDEX_COLUMN_MAP: dict[str, str] = {
+    "sp500":  "SP500",
+    "dow":    "DOW",
+    "nasdaq": "NASDAQ",
+}
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -118,7 +126,7 @@ def _sample_pairs_every_14_days(
 
 def _sector_to_table_name(sector: str) -> str:
     """
-    Convert a sector display name to the corresponding Supabase table name.
+    Convert a sector display name to the corresponding Supabase top-10 table name.
 
     Special case:
       "Steel and aluminum" / "Steel & aluminum"  -> "Steel_aluminum_top10"
@@ -140,6 +148,32 @@ def _sector_to_table_name(sector: str) -> str:
     table = cleaned[0].upper() + cleaned[1:]
     table = table.replace(" ", "_")
     return f"{table}_top10"
+
+
+def _sector_to_index_table_name(sector: str) -> str:
+    """
+    Convert a sector display name to the corresponding Supabase sector-index table name.
+
+    Special case:
+      "Steel and aluminum" / "Steel & aluminum"  -> "Steel_aluminum_index"
+
+    All other sectors:
+      Capitalise first letter, replace spaces with underscores, append "_index".
+
+    Examples:
+      "Energy"      -> "Energy_index"
+      "Aerospace"   -> "Aerospace_index"
+    """
+    if sector.lower() in ("steel and aluminum", "steel & aluminum"):
+        return "Steel_aluminum_index"
+
+    cleaned = sector.strip()
+    if not cleaned:
+        raise ValueError("sector must not be empty")
+
+    table = cleaned[0].upper() + cleaned[1:]
+    table = table.replace(" ", "_")
+    return f"{table}_index"
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -360,64 +394,127 @@ async def get_chart_data(
             )
         return await _fetch_sector_chart_data(sector, supabase)
 
-    return await _fetch_index_chart_data(universe, supabase)
+    # For index universes (sp500 / dow / nasdaq), query the sector-specific
+    # {Sector}_index table when a sector is selected, otherwise fall back to
+    # the global Index_paths table.
+    return await _fetch_index_chart_data(universe, supabase, sector=sector)
 
 
-async def _fetch_index_chart_data(universe: str, supabase: Client) -> ChartDataResponse:
-    """Return baseline + tariff-adjusted index price series, sampled every 14 days."""
-    index_value = _UNIVERSE_INDEX_MAP[universe]
+async def _fetch_index_chart_data(
+    universe: str,
+    supabase: Client,
+    sector: Optional[str] = None,
+) -> ChartDataResponse:
+    """
+    Return two series for the selected universe + sector:
 
-    resp = (
-        supabase.table("Index_paths")
-        .select("date, baseline_price, impacted_price")
-        .eq("index", index_value)
-        .order("date", desc=False)
-        .execute()
-    )
+    1. baseline  — baseline_price from `index_baseline` WHERE index=universe
+                   (solid line: global market reference, no tariff)
+    2. adjusted  — SP500/DOW/NASDAQ column from `{Sector}_index`
+                   (dashed line: sector-specific tariff-impacted path)
 
-    if not resp.data:
+    Table schemas:
+      index_baseline  : date, index (text), baseline_price, impacted_price
+      {Sector}_index  : date, SP500, DOW, NASDAQ
+    """
+    if not sector:
         raise HTTPException(
             status_code=404,
-            detail=f"No data found in Index_paths for universe='{universe}' (index='{index_value}').",
+            detail="A sector must be selected to view sector-specific index data.",
         )
 
-    baseline_raw: list[tuple[str, float]] = []
-    adjusted_raw: list[tuple[str, float]] = []
+    col         = _SECTOR_INDEX_COLUMN_MAP[universe]   # "SP500" | "DOW" | "NASDAQ"
+    index_value = _UNIVERSE_INDEX_MAP[universe]         # "sp500" | "dow"  | "nasdaq"
 
-    for row in resp.data:
-        raw_date = row.get("date")
-        baseline = row.get("baseline_price")
-        impacted = row.get("impacted_price")
-        if raw_date is None:
-            continue
-        date_str = _normalize_date(raw_date)
-        if baseline is not None:
-            baseline_raw.append((date_str, float(baseline)))
-        if impacted is not None:
-            adjusted_raw.append((date_str, float(impacted)))
+    try:
+        table_name = _sector_to_index_table_name(sector)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    if not adjusted_raw:
+    # ── 1. Baseline from index_baseline ───────────────────────────────────────
+    try:
+        baseline_resp = (
+            supabase.table("index_baseline")
+            .select("date, baseline_price")
+            .eq("index", index_value)
+            .order("date", desc=False)
+            .execute()
+        )
+    except Exception as exc:
         raise HTTPException(
             status_code=404,
-            detail=f"All rows for index='{index_value}' have null impacted_price.",
+            detail=f"Could not query index_baseline for universe='{universe}'. Error: {exc}",
         )
 
+    # ── 2. Sector-adjusted from {Sector}_index ────────────────────────────────
+    try:
+        sector_resp = (
+            supabase.table(table_name)
+            .select(f"date, {col}")
+            .order("date", desc=False)
+            .execute()
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not query '{table_name}' for universe='{universe}'. Error: {exc}",
+        )
+
+    if not sector_resp.data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No data found in '{table_name}'.",
+        )
+
+    # ── 3. Build series ───────────────────────────────────────────────────────
     series: list[ChartSeries] = []
+
+    # Baseline series (solid slate line in frontend)
+    baseline_raw: list[tuple[str, float]] = []
+    for row in (baseline_resp.data or []):
+        raw_date = row.get("date")
+        val      = row.get("baseline_price")
+        if raw_date is None or val is None:
+            continue
+        baseline_raw.append((_normalize_date(raw_date), float(val)))
+
     if baseline_raw:
         series.append(ChartSeries(
             key="baseline",
             label="Baseline (no tariff)",
             kind="baseline",
-            points=[SeriesPoint(date=d, value=v) for d, v in _sample_pairs_every_14_days(baseline_raw)],
+            points=[
+                SeriesPoint(date=d, value=v)
+                for d, v in _sample_pairs_every_14_days(baseline_raw)
+            ],
         ))
+
+    # Sector-adjusted series (dashed orange line in frontend)
+    adjusted_raw: list[tuple[str, float]] = []
+    for row in sector_resp.data:
+        raw_date = row.get("date")
+        val      = row.get(col)
+        if raw_date is None or val is None:
+            continue
+        adjusted_raw.append((_normalize_date(raw_date), float(val)))
+
+    if not adjusted_raw:
+        raise HTTPException(
+            status_code=404,
+            detail=f"All rows in '{table_name}' have null '{col}'.",
+        )
+
     series.append(ChartSeries(
         key="adjusted",
-        label="Tariff-adjusted",
+        label=f"{sector} — {col}",
         kind="adjusted",
-        points=[SeriesPoint(date=d, value=v) for d, v in _sample_pairs_every_14_days(adjusted_raw)],
+        points=[
+            SeriesPoint(date=d, value=v)
+            for d, v in _sample_pairs_every_14_days(adjusted_raw)
+        ],
     ))
 
-    return ChartDataResponse(universe=universe, series=series)
+    return ChartDataResponse(universe=universe, sector=sector, series=series)
 
 
 async def _fetch_sector_chart_data(sector: str, supabase: Client) -> ChartDataResponse:

@@ -131,9 +131,13 @@ export function ChartAreaInteractive({
   if (indexBaseline) chartConfig[indexBaseline.key] = { label: "Baseline (no tariff)" }
   if (indexAdjusted) chartConfig[indexAdjusted.key] = { label: "Tariff-adjusted" }
 
+  // For index universes with a sector selected, append the sector name so
+  // users know they're viewing sector-specific (not global) index data.
   const universeLabel = isSectorMode
     ? data.sector ?? "Sector"
-    : UNIVERSE_LABELS[data.universe] ?? data.universe
+    : data.sector
+      ? `${UNIVERSE_LABELS[data.universe] ?? data.universe} — ${data.sector}`
+      : UNIVERSE_LABELS[data.universe] ?? data.universe
 
   const chartKey = `${data.universe}|${data.sector ?? ""}|${data.series
     .map((s) => s.key)
@@ -152,7 +156,9 @@ export function ChartAreaInteractive({
               {country ? `${country} tariff scenario · ` : ""}
               {isSectorMode
                 ? "Gray dashed = sector baseline · Bold white = tariff-adjusted avg"
-                : "Solid = baseline (no tariff) · Dashed = tariff-adjusted"}
+                : data.sector
+                  ? `${data.sector} sector impact · Solid = baseline · Dashed = tariff-adjusted`
+                  : "Solid = baseline (no tariff) · Dashed = tariff-adjusted"}
             </CardDescription>
           </div>
 

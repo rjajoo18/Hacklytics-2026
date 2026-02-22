@@ -114,18 +114,17 @@ export default function Page() {
     })
   }, [selectedCountry, selectedSector])
 
-  // Fetch chart data when universe or sector changes
+  // Fetch chart data when universe or sector changes.
+  // A sector must always be selected — all index data comes from {Sector}_index tables.
   useEffect(() => {
-    const isTop10 = selectedUniverse === 'sector_top10'
-    if (isTop10 && !selectedSector) {
+    if (!selectedSector) {
       setChartData(null)
       setChartLoading(false)
       return
     }
     setChartLoading(true)
     setChartData(null)
-    const sector = isTop10 ? selectedSector ?? undefined : undefined
-    fetchChartData(selectedUniverse as Universe, sector).then(data => {
+    fetchChartData(selectedUniverse as Universe, selectedSector).then(data => {
       setChartData(data)
       setChartLoading(false)
     })
@@ -296,12 +295,12 @@ export default function Page() {
 
                 {/* Chart */}
                 <div className="px-4 lg:px-6">
-                  {selectedUniverse === 'sector_top10' && !selectedSector ? (
+                  {!selectedSector ? (
                     <div className="flex flex-col items-center justify-center h-64 rounded-xl border border-border/40 bg-card text-center gap-3">
                       <div className="text-4xl opacity-30">📊</div>
-                      <p className="text-sm text-muted-foreground">Select a sector above to load the top 10 stocks chart</p>
+                      <p className="text-sm text-muted-foreground">Select a sector above to load the chart</p>
                       <p className="text-xs text-muted-foreground/60">
-                        Choose a sector to visualize individual stock tariff impact
+                        Each sector has its own SP500, DOW, and NASDAQ index path
                       </p>
                     </div>
                   ) : (
