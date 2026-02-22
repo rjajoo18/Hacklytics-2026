@@ -44,19 +44,19 @@ export function SectionCards({ tariffProb, tariffProbLoading }: SectionCardsProp
           <div className="w-full">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-muted-foreground">Prediction Model Accuracy</span>
-              <span className="text-red-400 font-medium">61%</span>
+              <span className="text-red-400 font-medium">78%</span>
             </div>
             <div className="w-full h-1.5 bg-muted/40 rounded-full overflow-hidden">
-              <div className="h-full bg-red-500 rounded-full" style={{ width: "61%" }} />
+              <div className="h-full bg-red-500 rounded-full" style={{ width: "78%" }} />
             </div>
           </div>
           <div className="w-full">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-muted-foreground">Stock Market Fluctuations</span>
-              <span className="text-orange-400 font-medium">72%</span>
+              <span className="text-green-400 font-medium">72%</span>
             </div>
             <div className="w-full h-1.5 bg-muted/40 rounded-full overflow-hidden">
-              <div className="h-full bg-orange-500 rounded-full" style={{ width: "72%" }} />
+              <div className="h-full bg-green-500 rounded-full" style={{ width: "72%" }} />
             </div>
           </div>
 
