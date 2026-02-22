@@ -14,8 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { IconWorld, IconBuildingFactory2, IconMicrophone, IconChevronDown, IconTrendingUp, IconTrendingDown, IconChartLine } from '@tabler/icons-react'
-import { fetchTariffProb, fetchIndexGraph, fetchChartData, type ChartDataResponse, type Universe } from '@/lib/api'
-
+import { fetchIndexGraph, fetchChartData, fetchTariffProb, type Universe, type ChartDataResponse } from '@/lib/api'
 const COUNTRIES = [
   { code: "CN", name: "China", flag: "🇨🇳", rate: "145%" },
   { code: "EU", name: "European Union", flag: "🇪🇺", rate: "20%" },
