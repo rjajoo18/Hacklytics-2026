@@ -1,13 +1,7 @@
+.claude/settings.local.json
+.claude/*.local.json
+
+__pycache__/
+*.pyc
+
 node_modules/
-
-
-# General cache
-.cache/
-.npm/
-.eslintcache
-
-# Build tool caches
-.parcel-cache/
-.next/
-.vite/
-.turbo/

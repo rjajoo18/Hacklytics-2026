@@ -1,265 +1,311 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
-import { useIsMobile } from '@/hooks/use-mobile'
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from "@/components/ui/card"
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from '@/components/ui/chart'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@/components/ui/toggle-group'
+} from "@/components/ui/chart"
+import type { ChartDataResponse } from "@/lib/api"
 
-const chartData = [
-  { date: "2024-04-01", imports: 222, exports: 150 },
-  { date: "2024-04-02", imports: 97, exports: 180 },
-  { date: "2024-04-03", imports: 167, exports: 120 },
-  { date: "2024-04-04", imports: 242, exports: 260 },
-  { date: "2024-04-05", imports: 373, exports: 290 },
-  { date: "2024-04-06", imports: 301, exports: 340 },
-  { date: "2024-04-07", imports: 245, exports: 180 },
-  { date: "2024-04-08", imports: 409, exports: 320 },
-  { date: "2024-04-09", imports: 59, exports: 110 },
-  { date: "2024-04-10", imports: 261, exports: 190 },
-  { date: "2024-04-11", imports: 327, exports: 350 },
-  { date: "2024-04-12", imports: 292, exports: 210 },
-  { date: "2024-04-13", imports: 342, exports: 380 },
-  { date: "2024-04-14", imports: 137, exports: 220 },
-  { date: "2024-04-15", imports: 120, exports: 170 },
-  { date: "2024-04-16", imports: 138, exports: 190 },
-  { date: "2024-04-17", imports: 446, exports: 360 },
-  { date: "2024-04-18", imports: 364, exports: 410 },
-  { date: "2024-04-19", imports: 243, exports: 180 },
-  { date: "2024-04-20", imports: 89, exports: 150 },
-  { date: "2024-04-21", imports: 137, exports: 200 },
-  { date: "2024-04-22", imports: 224, exports: 170 },
-  { date: "2024-04-23", imports: 138, exports: 230 },
-  { date: "2024-04-24", imports: 387, exports: 290 },
-  { date: "2024-04-25", imports: 215, exports: 250 },
-  { date: "2024-04-26", imports: 75, exports: 130 },
-  { date: "2024-04-27", imports: 383, exports: 420 },
-  { date: "2024-04-28", imports: 122, exports: 180 },
-  { date: "2024-04-29", imports: 315, exports: 240 },
-  { date: "2024-04-30", imports: 454, exports: 380 },
-  { date: "2024-05-01", imports: 165, exports: 220 },
-  { date: "2024-05-02", imports: 293, exports: 310 },
-  { date: "2024-05-03", imports: 247, exports: 190 },
-  { date: "2024-05-04", imports: 385, exports: 420 },
-  { date: "2024-05-05", imports: 481, exports: 390 },
-  { date: "2024-05-06", imports: 498, exports: 520 },
-  { date: "2024-05-07", imports: 388, exports: 300 },
-  { date: "2024-05-08", imports: 149, exports: 210 },
-  { date: "2024-05-09", imports: 227, exports: 180 },
-  { date: "2024-05-10", imports: 293, exports: 330 },
-  { date: "2024-05-11", imports: 335, exports: 270 },
-  { date: "2024-05-12", imports: 197, exports: 240 },
-  { date: "2024-05-13", imports: 197, exports: 160 },
-  { date: "2024-05-14", imports: 448, exports: 490 },
-  { date: "2024-05-15", imports: 473, exports: 380 },
-  { date: "2024-05-16", imports: 338, exports: 400 },
-  { date: "2024-05-17", imports: 499, exports: 420 },
-  { date: "2024-05-18", imports: 315, exports: 350 },
-  { date: "2024-05-19", imports: 235, exports: 180 },
-  { date: "2024-05-20", imports: 177, exports: 230 },
-  { date: "2024-05-21", imports: 82, exports: 140 },
-  { date: "2024-05-22", imports: 81, exports: 120 },
-  { date: "2024-05-23", imports: 252, exports: 290 },
-  { date: "2024-05-24", imports: 294, exports: 220 },
-  { date: "2024-05-25", imports: 201, exports: 250 },
-  { date: "2024-05-26", imports: 213, exports: 170 },
-  { date: "2024-05-27", imports: 420, exports: 460 },
-  { date: "2024-05-28", imports: 233, exports: 190 },
-  { date: "2024-05-29", imports: 78, exports: 130 },
-  { date: "2024-05-30", imports: 340, exports: 280 },
-  { date: "2024-05-31", imports: 178, exports: 230 },
-  { date: "2024-06-01", imports: 178, exports: 200 },
-  { date: "2024-06-02", imports: 470, exports: 410 },
-  { date: "2024-06-03", imports: 103, exports: 160 },
-  { date: "2024-06-04", imports: 439, exports: 380 },
-  { date: "2024-06-05", imports: 88, exports: 140 },
-  { date: "2024-06-06", imports: 294, exports: 250 },
-  { date: "2024-06-07", imports: 323, exports: 370 },
-  { date: "2024-06-08", imports: 385, exports: 320 },
-  { date: "2024-06-09", imports: 438, exports: 480 },
-  { date: "2024-06-10", imports: 155, exports: 200 },
-  { date: "2024-06-11", imports: 92, exports: 150 },
-  { date: "2024-06-12", imports: 492, exports: 420 },
-  { date: "2024-06-13", imports: 81, exports: 130 },
-  { date: "2024-06-14", imports: 426, exports: 380 },
-  { date: "2024-06-15", imports: 307, exports: 350 },
-  { date: "2024-06-16", imports: 371, exports: 310 },
-  { date: "2024-06-17", imports: 475, exports: 520 },
-  { date: "2024-06-18", imports: 107, exports: 170 },
-  { date: "2024-06-19", imports: 341, exports: 290 },
-  { date: "2024-06-20", imports: 408, exports: 450 },
-  { date: "2024-06-21", imports: 169, exports: 210 },
-  { date: "2024-06-22", imports: 317, exports: 270 },
-  { date: "2024-06-23", imports: 480, exports: 530 },
-  { date: "2024-06-24", imports: 132, exports: 180 },
-  { date: "2024-06-25", imports: 141, exports: 190 },
-  { date: "2024-06-26", imports: 434, exports: 380 },
-  { date: "2024-06-27", imports: 448, exports: 490 },
-  { date: "2024-06-28", imports: 149, exports: 200 },
-  { date: "2024-06-29", imports: 103, exports: 160 },
-  { date: "2024-06-30", imports: 446, exports: 400 },
-]
+const UNIVERSE_LABELS: Record<string, string> = {
+  sp500: "S&P 500",
+  dow: "Dow Jones",
+  nasdaq: "NASDAQ",
+  sector_top10: "Sector Top 10",
+}
 
-const chartConfig = {
-  imports: {
-    label: "Tariffed Imports",
-    color: "#ef4444",
-  },
-  exports: {
-    label: "US Exports",
-    color: "#22c55e",
-  },
-} satisfies ChartConfig
+interface ChartAreaInteractiveProps {
+  data?: ChartDataResponse | null
+  loading?: boolean
+  country?: string
+  tariffProb?: number | null
+}
 
-export function ChartAreaInteractive() {
-  const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("90d")
+export function ChartAreaInteractive({
+  data,
+  loading,
+  country,
+  tariffProb,
+}: ChartAreaInteractiveProps) {
+  // ── Loading ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <Card className="@container/card">
+        <CardHeader>
+          <CardTitle>Loading chart data…</CardTitle>
+          <CardDescription>Fetching projected prices from backend</CardDescription>
+        </CardHeader>
+        <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+          <div className="flex items-center justify-center h-[300px] text-muted-foreground text-sm animate-pulse">
+            Fetching data…
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-  React.useEffect(() => {
-    if (isMobile) {
-      setTimeRange("7d")
+  // ── No data ───────────────────────────────────────────────────────────────
+  if (!data || data.series.length === 0) {
+    return (
+      <Card className="@container/card">
+        <CardHeader>
+          <CardTitle>No data available</CardTitle>
+          <CardDescription>
+            Could not load chart data. Check that the backend is running.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+          <div className="flex items-center justify-center h-[300px] text-muted-foreground/50 text-sm">
+            No chart data
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // ── Pivot to wide-format for Recharts ─────────────────────────────────────
+  const allDates = new Set<string>()
+  for (const series of data.series) {
+    for (const point of series.points) allDates.add(point.date)
+  }
+
+  const lookup: Record<string, Record<string, number>> = {}
+  for (const series of data.series) {
+    lookup[series.key] = {}
+    for (const point of series.points) lookup[series.key][point.date] = point.value
+  }
+
+  const chartData = Array.from(allDates)
+    .sort()
+    .map((date) => {
+      const row: Record<string, number | string> = { date }
+      for (const series of data.series) {
+        const v = lookup[series.key][date]
+        if (v !== undefined) row[series.key] = v
+      }
+      return row
+    })
+
+  // ── Y-axis domain ─────────────────────────────────────────────────────────
+  const allValues: number[] = []
+  for (const row of chartData) {
+    for (const [key, val] of Object.entries(row)) {
+      if (key !== "date" && typeof val === "number") allValues.push(val)
     }
-  }, [isMobile])
+  }
+  const minV = Math.min(...allValues)
+  const maxV = Math.max(...allValues)
+  const pad = (maxV - minV) * 0.1
+  const yDomain: [number, number] = [minV - pad, maxV + pad]
 
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date)
-    const referenceDate = new Date("2024-06-30")
-    let daysToSubtract = 90
-    if (timeRange === "30d") {
-      daysToSubtract = 30
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7
-    }
-    const startDate = new Date(referenceDate)
-    startDate.setDate(startDate.getDate() - daysToSubtract)
-    return date >= startDate
+  // ── Series buckets ────────────────────────────────────────────────────────
+  const stockSeries = data.series.filter((s) => s.kind === "stock")
+  const avgBaseline = data.series.find((s) => s.kind === "sector_avg_baseline")
+  const avgAdjusted = data.series.find((s) => s.kind === "sector_avg_adjusted")
+  const indexBaseline = data.series.find((s) => s.kind === "baseline")
+  const indexAdjusted = data.series.find((s) => s.kind === "adjusted")
+
+  const isSectorMode = data.universe === "sector_top10"
+
+  // ── ChartConfig (only used for tooltip labels) ────────────────────────────
+  const chartConfig: ChartConfig = {}
+
+  // stocks: no colors, just labels
+  stockSeries.forEach((s) => {
+    chartConfig[s.key] = { label: s.label }
   })
+
+  if (avgBaseline) chartConfig[avgBaseline.key] = { label: "Sector baseline" }
+  if (avgAdjusted) chartConfig[avgAdjusted.key] = { label: "Sector avg adjusted" }
+  if (indexBaseline) chartConfig[indexBaseline.key] = { label: "Baseline (no tariff)" }
+  if (indexAdjusted) chartConfig[indexAdjusted.key] = { label: "Tariff-adjusted" }
+
+  // For index universes with a sector selected, append the sector name so
+  // users know they're viewing sector-specific (not global) index data.
+  const universeLabel = isSectorMode
+    ? data.sector ?? "Sector"
+    : data.sector
+      ? `${UNIVERSE_LABELS[data.universe] ?? data.universe} — ${data.sector}`
+      : UNIVERSE_LABELS[data.universe] ?? data.universe
+
+  const chartKey = `${data.universe}|${data.sector ?? ""}|${data.series
+    .map((s) => s.key)
+    .join(",")}`
 
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Trade Flow Under Tariffs</CardTitle>
-        <CardDescription>
-          <span className="hidden @[540px]/card:block">
-            Tariffed imports (red) vs US exports (green) — last 3 months
-          </span>
-          <span className="@[540px]/card:hidden">Imports vs Exports</span>
-        </CardDescription>
-        <CardAction>
-          <ToggleGroup
-            type="single"
-            value={timeRange}
-            onValueChange={setTimeRange}
-            variant="outline"
-            className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
-          >
-            <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
-            <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
-          </ToggleGroup>
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
-              size="sm"
-              aria-label="Select a value"
-            >
-              <SelectValue placeholder="Last 3 months" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="90d" className="rounded-lg">Last 3 months</SelectItem>
-              <SelectItem value="30d" className="rounded-lg">Last 30 days</SelectItem>
-              <SelectItem value="7d" className="rounded-lg">Last 7 days</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardAction>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>
+              {universeLabel}
+              {isSectorMode && " — Top 10 Stocks"}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              {country ? `${country} tariff scenario · ` : ""}
+              {isSectorMode
+                ? "Gray dashed = sector baseline · Bold white = tariff-adjusted avg"
+                : data.sector
+                  ? `${data.sector} sector impact · Solid = baseline · Dashed = tariff-adjusted`
+                  : "Solid = baseline (no tariff) · Dashed = tariff-adjusted"}
+            </CardDescription>
+          </div>
+
+          {tariffProb != null && (
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                Tariff Risk
+              </p>
+              <p
+                className={`text-2xl font-bold tabular-nums leading-tight ${
+                  tariffProb >= 60
+                    ? "text-red-400"
+                    : tariffProb >= 35
+                      ? "text-orange-400"
+                      : "text-yellow-400"
+                }`}
+              >
+                {tariffProb.toFixed(1)}%
+              </p>
+            </div>
+          )}
+        </div>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+
+      <CardContent className="px-2 pt-2 sm:px-6">
         <ChartContainer
+          key={chartKey}
           config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className="aspect-auto h-[300px] w-full"
         >
-          <AreaChart data={filteredData}>
-            <defs>
-              <linearGradient id="fillImports" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
-              </linearGradient>
-              <linearGradient id="fillExports" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#22c55e" stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
+          <LineChart data={chartData} margin={{ left: 8, right: 8 }}>
             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
             <XAxis
               dataKey="date"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={32}
-              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 12 }}
-              tickFormatter={(value) => {
-                const date = new Date(value)
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }}
+              minTickGap={40}
+              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }}
+              tickFormatter={(v) =>
+                new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+              }
             />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              domain={yDomain}
+              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }}
+              tickFormatter={(v) => `$${Number(v).toFixed(0)}`}
+              width={58}
+            />
+
             <ChartTooltip
-              cursor={false}
+              cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }}
               content={
                 <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
+                  labelFormatter={(v) =>
+                    new Date(v).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
+                      year: "numeric",
                     })
+                  }
+                  formatter={(value, name) => {
+                    const key = String(name)
+                    if (key === "sector_avg_baseline") return null
+                    const cfg = chartConfig[key]
+                    if (!cfg) return null
+                    return [`$${Number(value).toFixed(2)}`, cfg.label]
                   }}
-                  indicator="dot"
+                  indicator="line"
                 />
               }
             />
-            <Area
-              dataKey="exports"
-              type="natural"
-              fill="url(#fillExports)"
-              stroke="#22c55e"
-              strokeWidth={2}
-              stackId="a"
-            />
-            <Area
-              dataKey="imports"
-              type="natural"
-              fill="url(#fillImports)"
-              stroke="#ef4444"
-              strokeWidth={2}
-              stackId="a"
-            />
-          </AreaChart>
+
+            {/* Individual stock lines — neutral */}
+            {stockSeries.map((s) => (
+              <Line
+                key={s.key}
+                dataKey={s.key}
+                stroke="rgba(255,255,255,0.30)"
+                strokeWidth={1.5}
+                dot={false}
+                type="monotone"
+                connectNulls
+                isAnimationActive={false}
+              />
+            ))}
+
+            {/* Sector avg baseline — thin dashed gray */}
+            {avgBaseline && (
+              <Line
+                key={avgBaseline.key}
+                dataKey={avgBaseline.key}
+                stroke="#9ca3af"
+                strokeWidth={1}
+                strokeDasharray="5 4"
+                dot={false}
+                type="monotone"
+                connectNulls
+                isAnimationActive={false}
+              />
+            )}
+
+            {/* Sector avg adjusted — thick bold near-white */}
+            {avgAdjusted && (
+              <Line
+                key={avgAdjusted.key}
+                dataKey={avgAdjusted.key}
+                stroke="#f1f5f9"
+                strokeWidth={3.5}
+                dot={false}
+                type="monotone"
+                connectNulls
+                isAnimationActive={false}
+              />
+            )}
+
+            {/* Index baseline — solid slate */}
+            {indexBaseline && (
+              <Line
+                key={indexBaseline.key}
+                dataKey={indexBaseline.key}
+                stroke="#94a3b8"
+                strokeWidth={2}
+                dot={false}
+                type="monotone"
+                connectNulls
+                isAnimationActive={false}
+              />
+            )}
+
+            {/* Index adjusted — dashed orange */}
+            {indexAdjusted && (
+              <Line
+                key={indexAdjusted.key}
+                dataKey={indexAdjusted.key}
+                stroke="#f97316"
+                strokeWidth={2.5}
+                strokeDasharray="6 3"
+                dot={false}
+                type="monotone"
+                connectNulls
+                isAnimationActive={false}
+              />
+            )}
+          </LineChart>
         </ChartContainer>
       </CardContent>
     </Card>
