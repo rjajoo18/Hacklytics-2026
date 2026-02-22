@@ -31,28 +31,34 @@ A) Baseline path (per index / per stock):
    - Fallback to deterministic drift-only when yfinance is unavailable:
        baseline[d] = last_price * exp(mu_daily_cal * d)
 
-B) Tariff shock / decay curve:
-   - total_impact_pct from CSV (sum of Move_*% columns across all rows)
-   - Two-phase curve:
+B) Tariff shock / decay curve (per sector row):
+   - Each (Country, Sector) row in the CSV carries its own Move_*% value.
+   - Each row gets its own two-phase curve applied independently:
        Phase 1  (1 <= d <= bottom_day) : linear ramp to full impact
-           cumulative(d) = total_impact_pct * (d / bottom_day)
+           cumulative(d) = row_impact_pct * (d / bottom_day)
        Phase 2  (d > bottom_day) : saturating partial recovery
-           cumulative(d) = total_impact_pct
+           cumulative(d) = row_impact_pct
                            * (1 - recovery_fraction
                               * (1 - exp(-(d - bottom_day) / tau)))
    - Maximum shock at d == bottom_day (default: 12)
-   - Settled impact by day 90: total_impact_pct * (1 - recovery_fraction)
+   - Settled impact by day 90: row_impact_pct * (1 - recovery_fraction)
    - CLI: --bottom_day (default 12), --recovery_fraction (default 0.5), --tau (default 20)
 
-C) Impacted path:
-       impacted[d] = baseline[d] * (1 + cumulative(d) / 100)
+C) Impacted path (multiplicative per-sector combination):
+       impacted[d] = baseline[d] * prod_i (1 + cumulative_i(d) / 100)
+
+   Each sector's shock curve is applied in turn so that large-impact sectors
+   (e.g. Steel) and small-impact sectors (e.g. Tech) contribute independently
+   to the index path, rather than being flattened into one blended curve.
+   The total_impact_pct column in index_paths.csv is the arithmetic sum of
+   all row contributions (for display / sanity checks only).
 
 Index-Level Aggregation
 -----------------------
 Move_SP500_%, Move_Nasdaq_%, Move_Dow_%, Move_Sector_Top50_% are already
 weighted contributions (price_gap * sensitivity_coefficient * index_weight).
-Total index impact = SUM across all rows.
-Sector impact      = SUM of Move_Sector_Top50_% grouped by Sector.
+Index impacted path = multiplicative product of per-row shock curves.
+Sector impact       = SUM of Move_Sector_Top50_% grouped by Sector.
 
 Sector Top-10 Stocks
 ---------------------
@@ -675,6 +681,81 @@ def impacted_path(
     return base * (1.0 + curve / 100.0)
 
 
+def impacted_path_multi(
+    base: np.ndarray,
+    sector_impacts: list,
+    bottom_day: int,
+    recovery_fraction: float,
+    tau: float,
+) -> np.ndarray:
+    """
+    Apply one shock/decay curve per sector, combined multiplicatively.
+
+    Each sector contributes its own temporal shock curve; the final impacted
+    path is the product of all individual sector multipliers on top of the
+    baseline:
+
+        impacted[d] = baseline[d] * prod_i (1 + curve_i(impact_i)[d] / 100)
+
+    This preserves the temporal shape of each sector's shock independently,
+    rather than collapsing all contributions into a single blended curve.
+    """
+    result = base.astype(float).copy()
+    for impact_pct in sector_impacts:
+        curve = shock_decay_curve(
+            len(base), float(impact_pct), bottom_day, recovery_fraction, tau
+        )
+        result *= (1.0 + curve / 100.0)
+    return result
+
+
+def compute_sector_index_paths(
+    df: pd.DataFrame,
+    index_baselines: dict,
+    bottom_day: int,
+    recovery_fraction: float,
+    tau: float,
+) -> dict:
+    """
+    For each sector, compute impacted index paths using only that sector's rows.
+
+    Each row in the sector group contributes its own shock/decay curve, applied
+    multiplicatively on top of the baseline.  Sectors with no rows produce a
+    path identical to the baseline.
+
+    Parameters
+    ----------
+    df              : validated master DataFrame (Sector column already normalised)
+    index_baselines : {'sp500': ndarray, 'nasdaq': ndarray, 'dow': ndarray}
+    bottom_day / recovery_fraction / tau : shock-curve parameters
+
+    Returns
+    -------
+    dict : sector_name -> {'sp500': ndarray, 'nasdaq': ndarray, 'dow': ndarray}
+    """
+    _index_cols = {
+        "sp500":  "Move_SP500_%",
+        "nasdaq": "Move_Nasdaq_%",
+        "dow":    "Move_Dow_%",
+    }
+
+    result: dict = {}
+    for sector, sector_df in df.groupby("Sector"):
+        sector_paths: dict = {}
+        for idx_key, col in _index_cols.items():
+            impacted = index_baselines[idx_key].astype(float).copy()
+            for _, row in sector_df.iterrows():
+                curve = shock_decay_curve(
+                    len(impacted), float(row[col]),
+                    bottom_day, recovery_fraction, tau
+                )
+                impacted *= (1.0 + curve / 100.0)
+            sector_paths[idx_key] = impacted
+        result[str(sector)] = sector_paths
+
+    return result
+
+
 def future_dates(horizon: int) -> pd.DatetimeIndex:
     """Calendar days starting tomorrow for a horizon-day window."""
     today = pd.Timestamp.today().normalize()
@@ -1118,6 +1199,40 @@ def save_stock_paths_csv(
         print(f"  Saved: {p}")
 
 
+def save_sector_index_csvs(
+    dates: pd.DatetimeIndex,
+    sector_index_paths: dict,
+    out_dir: str,
+) -> None:
+    """
+    Save one CSV per sector in out_dir/.
+
+    File naming: {sector_lower}_index_paths.csv
+    Columns    : date, SP500, DOW, NASDAQ
+
+    Each row is a calendar day; the index values reflect the baseline path
+    modified only by that sector's tariff shock rows (multiplicative).
+    """
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    for sector, paths in sorted(sector_index_paths.items()):
+        rows = [
+            {
+                "date":   date,
+                "SP500":  round(float(sp), 4),
+                "DOW":    round(float(dw), 4),
+                "NASDAQ": round(float(nq), 4),
+            }
+            for date, sp, dw, nq in zip(
+                dates.date, paths["sp500"], paths["dow"], paths["nasdaq"]
+            )
+        ]
+        p = out / f"{sector.lower()}_index_paths.csv"
+        pd.DataFrame(rows).to_csv(p, index=False)
+        print(f"  Saved: {p}")
+
+
 # =============================================================================
 # Sector-tickers resolution
 # =============================================================================
@@ -1217,18 +1332,34 @@ def main() -> None:
             params, args.horizon_days,
             args.jump_lambda, args.jump_mu, args.jump_sigma, rng
         )
-        imp = impacted_path(
-            base, index_impacts[key],
+        # Apply each sector's tariff shock independently (multiplicative).
+        # df[cfg["col"]] gives one weighted contribution per (Country, Sector) row.
+        sector_impact_list = df[cfg["col"]].tolist()
+        imp = impacted_path_multi(
+            base, sector_impact_list,
             args.bottom_day, args.recovery_fraction, args.tau
         )
 
         index_results[key] = {
             "baseline":         base,
             "impacted":         imp,
-            "total_impact_pct": index_impacts[key],
+            "total_impact_pct": index_impacts[key],   # sum kept for display/CSV
             "cfg":              cfg,
             "params":           params,
         }
+
+    # ------------------------------------------------------------------
+    # 4b. Sector-specific index paths (one CSV per sector)
+    # ------------------------------------------------------------------
+    print("\n=== Building Sector-Specific Index Paths ===")
+    index_baselines = {key: res["baseline"] for key, res in index_results.items()}
+    sector_index_paths = compute_sector_index_paths(
+        df, index_baselines,
+        args.bottom_day, args.recovery_fraction, args.tau,
+    )
+    print(f"  Computed paths for {len(sector_index_paths)} sectors")
+    print("\n=== Saving Sector Index CSVs ===")
+    save_sector_index_csvs(dates, sector_index_paths, args.out_dir)
 
     # ------------------------------------------------------------------
     # 5. Build sector + stock paths
