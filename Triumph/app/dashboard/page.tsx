@@ -16,16 +16,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { IconWorld, IconBuildingFactory2, IconMicrophone, IconChevronDown, IconTrendingUp, IconTrendingDown, IconChartLine } from '@tabler/icons-react'
 import { fetchIndexGraph, fetchChartData, fetchTariffProb, type Universe, type ChartDataResponse } from '@/lib/api'
 const COUNTRIES = [
-  { code: "CN", name: "China", flag: "🇨🇳", rate: "145%" },
-  { code: "EU", name: "European Union", flag: "🇪🇺", rate: "20%" },
-  { code: "MX", name: "Mexico", flag: "🇲🇽", rate: "25%" },
-  { code: "CA", name: "Canada", flag: "🇨🇦", rate: "25%" },
-  { code: "JP", name: "Japan", flag: "🇯🇵", rate: "24%" },
-  { code: "KR", name: "South Korea", flag: "🇰🇷", rate: "26%" },
-  { code: "VN", name: "Vietnam", flag: "🇻🇳", rate: "46%" },
-  { code: "IN", name: "India", flag: "🇮🇳", rate: "26%" },
-  { code: "GB", name: "United Kingdom", flag: "🇬🇧", rate: "10%" },
-  { code: "TW", name: "Taiwan", flag: "🇹🇼", rate: "32%" },
+  { code: "CN", name: "China", flag: "🇨🇳" },
+  { code: "EU", name: "European Union", flag: "🇪🇺"},
+  { code: "MX", name: "Mexico", flag: "🇲🇽"},
+  { code: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "JP", name: "Japan", flag: "🇯🇵"},
+  { code: "KR", name: "South Korea", flag: "🇰🇷"},
+  { code: "VN", name: "Vietnam", flag: "🇻🇳"},
+  { code: "IN", name: "India", flag: "🇮🇳"},
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧"},
+  { code: "TW", name: "Taiwan", flag: "🇹🇼"},
 ]
 
 const UNIVERSE_OPTIONS = [

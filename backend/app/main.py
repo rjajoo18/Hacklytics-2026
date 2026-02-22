@@ -2,16 +2,16 @@
 Hacklytics 2026 — FastAPI backend entry point.
 
 Run from the project root (Hacklytics_2026/):
-    uvicorn backend.app.main:app --reload --port 8000
+    python -m uvicorn backend.app.main:app --reload --port 8000
 
 Or from inside backend/:
-    uvicorn app.main:app --reload --port 8000
+    python -m uvicorn app.main:app --reload --port 8000
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import dashboard, map as map_router
+from .api import dashboard, map as map_router, chatbot
 
 app = FastAPI(
     title="Hacklytics 2026 — Tariff Impact API",
@@ -35,6 +35,7 @@ app.add_middleware(
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(dashboard.router)
 app.include_router(map_router.router)
+app.include_router(chatbot.router)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

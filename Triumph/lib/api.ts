@@ -1,5 +1,41 @@
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"
 
+// ── Chatbot ────────────────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  role: "user" | "assistant"
+  content: string
+}
+
+export interface ChatResponse {
+  response: string
+}
+
+export interface ChatError {
+  error: string
+}
+
+export async function sendChatMessage(
+  message: string,
+  history: ChatMessage[] = [],
+): Promise<ChatResponse | ChatError> {
+  try {
+    const res = await fetch(`${BACKEND}/api/chatbot/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, history }),
+      cache: "no-store",
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      return { error: body.detail ?? `Server error ${res.status}` }
+    }
+    return await res.json()
+  } catch {
+    return { error: "Network error — is the backend running on port 8000?" }
+  }
+}
+
 export type Universe = "sp500" | "dow" | "nasdaq" | "sector_top10"
 
 export interface ChartDataPoint {

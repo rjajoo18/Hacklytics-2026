@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  IconBrain,
   IconChartBar,
   IconDashboard,
   IconDatabase,
@@ -37,8 +38,9 @@ const data = {
   },
   navMain: [
     { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
-    { title: "Global",    url: "/global",       icon: IconGlobe },
+    { title: "Global",    url: "/global",    icon: IconGlobe },
     { title: "Trends",    url: "/trends",    icon: IconChartBar },
+    { title: "Analytics", url: "/analytics", icon: IconBrain },
   ],
   navSecondary: [
     { title: "Settings", url: "/settings", icon: IconSettings },

@@ -62,6 +62,11 @@ const SECTOR_ICONS: Record<string, string> = {
   "agriculture": "🌾",
   "pharmaceuticals": "💊",
   "energy": "⚡",
+  "aerospace": "✈️",
+  "maritime": "🚢",
+  "lumber": "🪵",
+  "metals": "🔩",
+  "minerals": "💎",
 }
 
 function formatRate(val: string | number): string {
@@ -98,18 +103,117 @@ const COUNTRIES = [
 ]
 
 const STATUS_COLORS = {
-  critical: { bar: "bg-red-500",    text: "text-red-400",    dot: "bg-red-500" },
-  high:     { bar: "bg-orange-500", text: "text-orange-400", dot: "bg-orange-500" },
-  medium:   { bar: "bg-yellow-500", text: "text-yellow-400", dot: "bg-yellow-500" },
-  low:      { bar: "bg-green-500",  text: "text-green-400",  dot: "bg-green-500" },
+  critical: { bar: "bg-red-500",    text: "text-red-400",    badge: "bg-red-500/10 border-red-500/30 text-red-400" },
+  high:     { bar: "bg-orange-500", text: "text-orange-400", badge: "bg-orange-500/10 border-orange-500/30 text-orange-400" },
+  medium:   { bar: "bg-yellow-500", text: "text-yellow-400", badge: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" },
+  low:      { bar: "bg-green-500",  text: "text-green-400",  badge: "bg-green-500/10 border-green-500/30 text-green-400" },
 }
 
 const MAP_BASE = `https://api.mapbox.com/styles/v1/shashankshaga/cmkrizwmr002n01r9govs70ma.html?title=false&access_token=pk.eyJ1Ijoic2hhc2hhbmtzaGFnYSIsImEiOiJjbWtyOTNlNXAwdnhtM2RweTZsd3lyZW9sIn0.2fQFrzvDoCmWxqsMftdCTA&zoomwheel=false`
 
 const glassStyle: React.CSSProperties = {
-  background: "rgba(8, 8, 12, 0.62)",
+  background: "rgba(8, 8, 12, 0.72)",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
+}
+
+// AI blurb generator based on sector + impact level
+function getSectorBlurb(sector: string, impact: number, country: string): string {
+  const s = sector.toLowerCase()
+  const tier = impact >= 80 ? "critical" : impact >= 60 ? "high" : impact >= 40 ? "medium" : "low"
+
+  const blurbs: Record<string, Record<string, string>> = {
+    "automotive": {
+      critical: "Supply chain disruption likely. Parts tariffs threaten assembly margins.",
+      high:     "Rising input costs pressuring OEMs. EV transition adds complexity.",
+      medium:   "Moderate exposure via parts imports. Watch currency effects.",
+      low:      "Minimal tariff friction. Domestic sourcing offsets most risk.",
+    },
+    "agriculture": {
+      critical: "Export routes severely disrupted. Commodity prices under pressure.",
+      high:     "Retaliatory tariffs hitting key crop exports. Farmers squeezed.",
+      medium:   "Some produce categories facing new duties. Markets adjusting.",
+      low:      "Limited direct impact. Agricultural trade mostly insulated.",
+    },
+    "pharmaceuticals": {
+      critical: "API sourcing at risk. Drug shortages possible if tariffs escalate.",
+      high:     "Generic drug margins compressed by ingredient tariffs.",
+      medium:   "Specialty drug costs rising. R&D pipelines under review.",
+      low:      "Pharma trade largely protected under existing exemptions.",
+    },
+    "steel & aluminum": {
+      critical: "Section 232 tariffs fully in effect. Metal costs surging.",
+      high:     "Downstream manufacturers absorbing elevated steel prices.",
+      medium:   "Quota systems limiting full tariff pass-through for now.",
+      low:      "Exemptions in place. Limited near-term pricing pressure.",
+    },
+    "semiconductors": {
+      critical: "Chip export controls escalating. Supply chains fracturing.",
+      high:     "Advanced node access restricted. Fab investment at risk.",
+      medium:   "Legacy chip supply adequate but advanced nodes tightening.",
+      low:      "Trade flow stable. Minor disruptions from licensing rules.",
+    },
+    "energy": {
+      critical: "LNG and crude flows rerouted. Energy security at stake.",
+      high:     "Tariffs on energy equipment raising infrastructure costs.",
+      medium:   "Renewables supply chain mildly affected by panel duties.",
+      low:      "Energy commodities largely exempt. Stable trade outlook.",
+    },
+    "aerospace": {
+      critical: "Parts supply chains at serious risk. MRO costs spiking.",
+      high:     "Bilateral aerospace agreements under strain.",
+      medium:   "Some component tariffs in effect but managed via exemptions.",
+      low:      "Aerospace trade protected by bilateral agreements.",
+    },
+    "textiles": {
+      critical: "Garment exports facing steep duties. Factory orders collapsing.",
+      high:     "Fast fashion supply chains rerouting away from tariffed ports.",
+      medium:   "Mid-tier apparel absorbing partial duty increases.",
+      low:      "Textile trade minimally impacted by current tariff schedule.",
+    },
+    "maritime": {
+      critical: "Port fees and shipping lane restrictions severely disrupting flow.",
+      high:     "Vessel tariffs and route changes adding significant freight costs.",
+      medium:   "Some shipping lanes affected. Carriers adjusting routes.",
+      low:      "Maritime trade flowing normally with minor regulatory friction.",
+    },
+    "lumber": {
+      critical: "Softwood lumber duties at peak. Construction costs surging.",
+      high:     "Housing sector absorbing elevated lumber import costs.",
+      medium:   "Partial countervailing duties in place. Markets adjusting.",
+      low:      "Lumber tariff exposure contained. Domestic supply adequate.",
+    },
+    "metals": {
+      critical: "Base metal tariffs cascading through manufacturing supply chains.",
+      high:     "Copper, nickel and rare earth duties adding significant cost.",
+      medium:   "Select metal categories facing new restrictions.",
+      low:      "Metals trade largely unaffected by current tariff regime.",
+    },
+    "minerals": {
+      critical: "Critical mineral access severely restricted. Strategic risk elevated.",
+      high:     "Rare earth export controls tightening. Battery supply at risk.",
+      medium:   "Some mineral categories facing new export licensing requirements.",
+      low:      "Mineral supply chains intact. Limited tariff exposure.",
+    },
+    "consumer goods": {
+      critical: "Broad consumer goods tariffs hitting retail margins hard.",
+      high:     "Price increases flowing to shelves as importers pass on duties.",
+      medium:   "Select categories face new duties. Retailers adjusting sourcing.",
+      low:      "Consumer goods trade flows stable. Minor category-level friction.",
+    },
+  }
+
+  const sectorBlurbs = blurbs[s]
+  if (sectorBlurbs) return sectorBlurbs[tier]
+
+  // Fallback generic blurbs
+  const fallback: Record<string, string> = {
+    critical: `${sector} faces severe tariff pressure. Immediate supply chain review recommended.`,
+    high:     `${sector} significantly exposed. Trade partners actively seeking alternatives.`,
+    medium:   `${sector} moderately affected. Monitoring ongoing policy developments.`,
+    low:      `${sector} shows limited tariff sensitivity under current trade terms.`,
+  }
+  return fallback[tier]
 }
 
 export default function GlobalView({ tariffData, sectorData }: Props) {
@@ -126,7 +230,7 @@ export default function GlobalView({ tariffData, sectorData }: Props) {
   }, [tariffData])
 
   const dynamicSectorImpacts = useMemo(() => {
-    const map: Record<string, { sector: string; icon: string; impact: number; change: string; status: "critical" | "high" | "medium" | "low" }[]> = {}
+    const map: Record<string, { sector: string; icon: string; impact: number; status: "critical" | "high" | "medium" | "low" }[]> = {}
     for (const row of sectorData) {
       const code = NAME_TO_CODE[row.country.toLowerCase().trim()]
       if (!code) continue
@@ -140,13 +244,14 @@ export default function GlobalView({ tariffData, sectorData }: Props) {
 
       const icon = SECTOR_ICONS[row.sector.toLowerCase()] ?? "📊"
 
-      map[code].push({
-        sector: row.sector,
-        icon,
-        impact,
-        change: `${impact}%`,
-        status,
-      })
+      // Deduplicate — keep highest impact per sector
+      const existing = map[code].find(s => s.sector.toLowerCase() === row.sector.toLowerCase())
+      if (existing) {
+        if (impact > existing.impact) existing.impact = impact
+        continue
+      }
+
+      map[code].push({ sector: row.sector, icon, impact, status })
     }
     for (const code of Object.keys(map)) {
       map[code].sort((a, b) => b.impact - a.impact)
@@ -232,7 +337,7 @@ export default function GlobalView({ tariffData, sectorData }: Props) {
             {/* Sector impact panel */}
             {selectedCountryData && sectors && (
               <div
-                className="absolute bottom-4 left-4 z-10 rounded-2xl border border-white/10 w-80"
+                className="absolute bottom-4 left-4 z-10 rounded-2xl border border-white/10 w-[420px]"
                 style={glassStyle}
               >
                 <div className="px-4 pt-3 pb-2 border-b border-white/5 flex items-center justify-between">
@@ -247,24 +352,44 @@ export default function GlobalView({ tariffData, sectorData }: Props) {
                     reset
                   </button>
                 </div>
-                <div className="p-3 grid grid-cols-1 gap-2">
+
+                <div className="p-3 flex flex-col gap-2.5 max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
                   {sectors.map(s => {
                     const colors = STATUS_COLORS[s.status]
+                    const blurb = getSectorBlurb(s.sector, s.impact, selectedCountryData.name)
+                    const statusLabel = s.status.charAt(0).toUpperCase() + s.status.slice(1)
+
                     return (
-                      <div key={s.sector} className="flex items-center gap-2">
-                        <span className="text-sm w-5 text-center shrink-0">{s.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[11px] font-medium text-white/65 truncate">{s.sector}</span>
-                            <span className={`text-[10px] font-bold ml-2 shrink-0 ${colors.text}`}>{s.change}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="flex-1 h-1 bg-white/8 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${colors.bar}`} style={{ width: `${s.impact}%` }} />
-                            </div>
-                            <span className={`text-[9px] font-semibold w-6 text-right shrink-0 ${colors.text}`}>{s.impact}%</span>
-                          </div>
+                      <div key={s.sector} className="flex flex-col gap-1.5">
+                        {/* Top row: icon + name + status badge */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm w-5 text-center shrink-0">{s.icon}</span>
+                          <span className="text-[11px] font-semibold text-white/75 flex-1">{s.sector}</span>
+                          <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${colors.badge}`}>
+                            {statusLabel}
+                          </span>
                         </div>
+
+                        {/* Progress bar — no duplicate % label */}
+                        <div className="flex items-center gap-2 pl-7">
+                          <div className="flex-1 h-1 bg-white/8 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${colors.bar}`}
+                              style={{ width: `${s.impact}%` }}
+                            />
+                          </div>
+                          <span className={`text-[10px] font-bold tabular-nums shrink-0 w-8 text-right ${colors.text}`}>
+                            {s.impact}%
+                          </span>
+                        </div>
+
+                        {/* AI blurb */}
+                        <p className="text-[10px] text-white/35 leading-relaxed pl-7 pr-1">
+                          {blurb}
+                        </p>
+
+                        {/* Divider */}
+                        <div className="border-t border-white/[0.04] mt-0.5" />
                       </div>
                     )
                   })}
