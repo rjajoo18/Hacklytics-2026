@@ -9,7 +9,12 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
-export function SectionCards() {
+interface SectionCardsProps {
+  tariffProb?: number | null
+  tariffProbLoading?: boolean
+}
+
+export function SectionCards({ tariffProb, tariffProbLoading }: SectionCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-3 px-4 lg:px-6 lg:grid-cols-3">
       
@@ -23,7 +28,11 @@ export function SectionCards() {
             <CardDescription className="text-red-400 font-medium">Tariff Prediction</CardDescription>
           </div>
           <CardTitle className="text-5xl font-bold tabular-nums text-red-500 mt-2">
-            87%
+            {tariffProbLoading
+              ? "…"
+              : tariffProb != null
+              ? `${tariffProb.toFixed(1)}%`
+              : "—"}
           </CardTitle>
           <CardAction>
             <Badge variant="outline" className="text-xs border-red-500/40 text-red-400 bg-red-500/10">

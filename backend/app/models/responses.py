@@ -18,6 +18,7 @@ class TariffProbResponse(BaseModel):
 class DatePricePoint(BaseModel):
     date: str    # "YYYY-MM-DD"
     price: float
+    baseline_price: float | None = None
 
 
 class IndexGraphResponse(BaseModel):
@@ -47,3 +48,23 @@ class SectorProbability(BaseModel):
 class CountrySectorsResponse(BaseModel):
     country: str
     sectors: list[SectorProbability]
+
+
+# ── Dashboard: unified chart-data endpoint ───────────────────────────────────
+
+class SeriesPoint(BaseModel):
+    date: str    # "YYYY-MM-DD"
+    value: float
+
+
+class ChartSeries(BaseModel):
+    key: str    # unique dataKey used by Recharts
+    label: str  # human-readable label
+    kind: str   # "baseline" | "adjusted" | "sector_avg_baseline" | "sector_avg_adjusted" | "stock"
+    points: list[SeriesPoint]
+
+
+class ChartDataResponse(BaseModel):
+    universe: str
+    sector: str | None = None
+    series: list[ChartSeries]

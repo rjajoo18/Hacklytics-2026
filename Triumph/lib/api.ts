@@ -10,8 +10,9 @@ const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"
 // ── Shared types ──────────────────────────────────────────────────────────────
 
 export type DatePrice = {
-  date: string  // "YYYY-MM-DD"
-  price: number
+  date: string          // "YYYY-MM-DD"
+  price: number         // impacted_price (with tariff effect)
+  baseline_price?: number  // pre-tariff baseline (sector top-10 only)
 }
 
 export type TariffProbResponse = {
@@ -38,6 +39,35 @@ export type SectorTop10Response = {
 export type CountrySectorsResponse = {
   country: string
   sectors: { sector: string; probability_percent: number }[]
+}
+
+// ── Chart-data endpoint ────────────────────────────────────────────────────────
+
+export type SeriesPoint = {
+  date: string
+  value: number
+}
+
+export type SeriesKind =
+  | 'baseline'
+  | 'adjusted'
+  | 'sector_avg_baseline'
+  | 'sector_avg_adjusted'
+  | 'stock'
+
+export type ChartSeries = {
+  key: string
+  label: string
+  kind: SeriesKind
+  points: SeriesPoint[]
+}
+
+export type Universe = 'sp500' | 'dow' | 'nasdaq' | 'sector_top10'
+
+export type ChartDataResponse = {
+  universe: string
+  sector: string | null
+  series: ChartSeries[]
 }
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
@@ -88,6 +118,25 @@ export async function fetchSectorTop10(
     )
     if (!res.ok) return null
     return (await res.json()) as SectorTop10Response
+  } catch {
+    return null
+  }
+}
+
+/** GET /api/dashboard/chart-data */
+export async function fetchChartData(
+  universe: Universe,
+  sector?: string,
+): Promise<ChartDataResponse | null> {
+  try {
+    const params = new URLSearchParams({ universe })
+    if (sector) params.set('sector', sector)
+    const res = await fetch(
+      `${BACKEND}/api/dashboard/chart-data?${params}`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return null
+    return (await res.json()) as ChartDataResponse
   } catch {
     return null
   }

@@ -40,9 +40,12 @@ from supabase import Client
 
 from ..core.supabase import get_supabase
 from ..models.responses import (
+    ChartDataResponse,
+    ChartSeries,
     DatePricePoint,
     IndexGraphResponse,
     SectorTop10Response,
+    SeriesPoint,
     TariffProbResponse,
     TickerSeries,
 )
@@ -59,6 +62,15 @@ _INDEX_VALUE_MAP: dict[str, str] = {
 }
 
 _VALID_GRAPH_TYPES = set(_INDEX_VALUE_MAP.keys()) | {"top10_sector_stocks"}
+
+# Maps universe key (chart-data endpoint) -> value stored in Index_paths.index column.
+_UNIVERSE_INDEX_MAP: dict[str, str] = {
+    "nasdaq": "nasdaq",
+    "sp500":  "sp500",
+    "dow":    "dow",
+}
+
+_VALID_UNIVERSES = set(_UNIVERSE_INDEX_MAP.keys()) | {"sector_top10"}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -85,6 +97,22 @@ def _sample_every_14_days(points: list[DatePricePoint]) -> list[DatePricePoint]:
             result.append(p)
             last = current
 
+    return result
+
+
+def _sample_pairs_every_14_days(
+    pairs: list[tuple[str, float]],
+) -> list[tuple[str, float]]:
+    """Down-sample (date, value) pairs, keeping one every >= 14 calendar days."""
+    if not pairs:
+        return []
+    result = [pairs[0]]
+    last = _date.fromisoformat(pairs[0][0])
+    for d, v in pairs[1:]:
+        current = _date.fromisoformat(d)
+        if (current - last).days >= 14:
+            result.append((d, v))
+            last = current
     return result
 
 
@@ -243,7 +271,7 @@ async def _fetch_sector_top10(sector: str, supabase: Client) -> SectorTop10Respo
     try:
         resp = (
             supabase.table(table_name)
-            .select("date, ticker, impacted_price")
+            .select("date, ticker, baseline_price, impacted_price")
             .order("date", desc=False)
             .execute()
         )
@@ -265,13 +293,24 @@ async def _fetch_sector_top10(sector: str, supabase: Client) -> SectorTop10Respo
     # Group rows by ticker -> sorted list of DatePricePoints
     ticker_map: dict[str, list[DatePricePoint]] = defaultdict(list)
     for row in resp.data:
-        raw_date  = row.get("date")
-        ticker    = row.get("ticker")
-        price_val = row.get("impacted_price")
-        if raw_date is None or ticker is None or price_val is None:
+        raw_date     = row.get("date")
+        ticker       = row.get("ticker")
+        impacted_val = row.get("impacted_price")
+        baseline_val = row.get("baseline_price")
+
+        if raw_date is None or ticker is None:
             continue
+
+        # impacted_price is required for this endpoint
+        if impacted_val is None:
+            continue
+
         ticker_map[ticker].append(
-            DatePricePoint(date=_normalize_date(raw_date), price=float(price_val))
+            DatePricePoint(
+                date=_normalize_date(raw_date),
+                price=float(impacted_val),
+                baseline_price=float(baseline_val) if baseline_val is not None else None,
+            )
         )
 
     if not ticker_map:
@@ -288,3 +327,236 @@ async def _fetch_sector_top10(sector: str, supabase: Client) -> SectorTop10Respo
     ]
 
     return SectorTop10Response(sector=sector, series=series)
+
+
+# ── /chart-data endpoint ───────────────────────────────────────────────────────
+
+@router.get("/chart-data", response_model=ChartDataResponse)
+async def get_chart_data(
+    universe: str         = Query(..., description="sp500 | dow | nasdaq | sector_top10"),
+    sector: Optional[str] = Query(None, description="Required when universe=sector_top10"),
+    supabase: Client      = Depends(get_supabase),
+) -> ChartDataResponse:
+    """
+    Unified chart-data endpoint consumed by the frontend LineChart.
+
+    - sp500 / dow / nasdaq  -> two series: baseline + tariff-adjusted index prices
+    - sector_top10          -> sector avg baseline, sector avg adjusted, + one series per ticker
+    """
+    if universe not in _VALID_UNIVERSES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid universe '{universe}'. "
+                f"Must be one of: {sorted(_VALID_UNIVERSES)}."
+            ),
+        )
+
+    if universe == "sector_top10":
+        if not sector:
+            raise HTTPException(
+                status_code=400,
+                detail="'sector' query parameter is required when universe=sector_top10.",
+            )
+        return await _fetch_sector_chart_data(sector, supabase)
+
+    return await _fetch_index_chart_data(universe, supabase)
+
+
+async def _fetch_index_chart_data(universe: str, supabase: Client) -> ChartDataResponse:
+    """Return baseline + tariff-adjusted index price series, sampled every 14 days."""
+    index_value = _UNIVERSE_INDEX_MAP[universe]
+
+    resp = (
+        supabase.table("Index_paths")
+        .select("date, baseline_price, impacted_price")
+        .eq("index", index_value)
+        .order("date", desc=False)
+        .execute()
+    )
+
+    if not resp.data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No data found in Index_paths for universe='{universe}' (index='{index_value}').",
+        )
+
+    baseline_raw: list[tuple[str, float]] = []
+    adjusted_raw: list[tuple[str, float]] = []
+
+    for row in resp.data:
+        raw_date = row.get("date")
+        baseline = row.get("baseline_price")
+        impacted = row.get("impacted_price")
+        if raw_date is None:
+            continue
+        date_str = _normalize_date(raw_date)
+        if baseline is not None:
+            baseline_raw.append((date_str, float(baseline)))
+        if impacted is not None:
+            adjusted_raw.append((date_str, float(impacted)))
+
+    if not adjusted_raw:
+        raise HTTPException(
+            status_code=404,
+            detail=f"All rows for index='{index_value}' have null impacted_price.",
+        )
+
+    series: list[ChartSeries] = []
+    if baseline_raw:
+        series.append(ChartSeries(
+            key="baseline",
+            label="Baseline (no tariff)",
+            kind="baseline",
+            points=[SeriesPoint(date=d, value=v) for d, v in _sample_pairs_every_14_days(baseline_raw)],
+        ))
+    series.append(ChartSeries(
+        key="adjusted",
+        label="Tariff-adjusted",
+        kind="adjusted",
+        points=[SeriesPoint(date=d, value=v) for d, v in _sample_pairs_every_14_days(adjusted_raw)],
+    ))
+
+    return ChartDataResponse(universe=universe, series=series)
+
+
+async def _fetch_sector_chart_data(sector: str, supabase: Client) -> ChartDataResponse:
+    """
+    Return per-ticker series + sector-average baseline/adjusted, sampled every 14 days.
+
+    - Individual stock series = impacted_price ONLY
+    - Sector avg baseline     = baseline_price
+    - Sector avg adjusted     = impacted_price
+    """
+    try:
+        table_name = _sector_to_table_name(sector)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    try:
+        resp = (
+            supabase.table(table_name)
+            .select("date, ticker, baseline_price, impacted_price")
+            .order("date", desc=False)
+            .execute()
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Could not query table '{table_name}' for sector='{sector}'. "
+                f"Error: {exc}"
+            ),
+        )
+
+    if not resp.data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Table '{table_name}' exists but contains no rows.",
+        )
+
+    # ─────────────────────────────────────────────
+    # Group by ticker
+    # ─────────────────────────────────────────────
+
+    ticker_baseline: dict[str, list[tuple[str, float]]] = defaultdict(list)
+    ticker_adjusted: dict[str, list[tuple[str, float]]] = defaultdict(list)
+
+    for row in resp.data:
+        raw_date = row.get("date")
+        ticker   = row.get("ticker")
+
+        if raw_date is None or ticker is None:
+            continue
+
+        date_str = _normalize_date(raw_date)
+
+        # ✅ STOCK LINES: impacted_price ONLY
+        impacted = row.get("impacted_price")
+        if impacted is not None:
+            ticker_adjusted[ticker].append((date_str, float(impacted)))
+
+        # Baseline is used ONLY for sector baseline average
+        baseline = row.get("baseline_price")
+        if baseline is not None:
+            ticker_baseline[ticker].append((date_str, float(baseline)))
+
+    if not ticker_adjusted:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No valid impacted_price rows found in '{table_name}'.",
+        )
+
+    # ─────────────────────────────────────────────
+    # Compute per-date sector averages
+    # ─────────────────────────────────────────────
+
+    date_baseline_vals: dict[str, list[float]] = defaultdict(list)
+    date_adjusted_vals: dict[str, list[float]] = defaultdict(list)
+
+    for pairs in ticker_baseline.values():
+        for d, v in pairs:
+            date_baseline_vals[d].append(v)
+
+    for pairs in ticker_adjusted.values():
+        for d, v in pairs:
+            date_adjusted_vals[d].append(v)
+
+    avg_baseline_raw = sorted(
+        [(d, sum(vals) / len(vals)) for d, vals in date_baseline_vals.items()],
+        key=lambda x: x[0],
+    )
+
+    avg_adjusted_raw = sorted(
+        [(d, sum(vals) / len(vals)) for d, vals in date_adjusted_vals.items()],
+        key=lambda x: x[0],
+    )
+
+    # ─────────────────────────────────────────────
+    # Build ChartSeries
+    # ─────────────────────────────────────────────
+
+    series: list[ChartSeries] = []
+
+    # Sector baseline average (thin dashed gray line in frontend)
+    if avg_baseline_raw:
+        series.append(ChartSeries(
+            key="sector_avg_baseline",
+            label="Sector avg (baseline)",
+            kind="sector_avg_baseline",
+            points=[
+                SeriesPoint(date=d, value=v)
+                for d, v in _sample_pairs_every_14_days(avg_baseline_raw)
+            ],
+        ))
+
+    # Sector adjusted average (bold white line in frontend)
+    if avg_adjusted_raw:
+        series.append(ChartSeries(
+            key="sector_avg_adjusted",
+            label="Sector avg (tariff-adjusted)",
+            kind="sector_avg_adjusted",
+            points=[
+                SeriesPoint(date=d, value=v)
+                for d, v in _sample_pairs_every_14_days(avg_adjusted_raw)
+            ],
+        ))
+
+    # Individual stock series (10 colored lines) — impacted only
+    for ticker in sorted(ticker_adjusted.keys()):
+        sampled = _sample_pairs_every_14_days(ticker_adjusted[ticker])
+        series.append(ChartSeries(
+            key=f"stock_{ticker}",
+            label=ticker,
+            kind="stock",
+            points=[
+                SeriesPoint(date=d, value=v)
+                for d, v in sampled
+            ],
+        ))
+
+    return ChartDataResponse(
+        universe="sector_top10",
+        sector=sector,
+        series=series,
+    )

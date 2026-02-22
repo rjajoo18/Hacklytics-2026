@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { ChartAreaInteractive } from '@/components/chart-area-interactive'
 import { DataTable } from '@/components/data-table'
@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/sidebar'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { IconWorld, IconBuildingFactory2, IconMicrophone, IconChevronDown, IconTrendingUp, IconTrendingDown } from '@tabler/icons-react'
+import { IconWorld, IconBuildingFactory2, IconMicrophone, IconChevronDown, IconTrendingUp, IconTrendingDown, IconChartLine } from '@tabler/icons-react'
+import { fetchTariffProb, fetchIndexGraph, fetchChartData, type ChartDataResponse, type Universe } from '@/lib/api'
 
 const COUNTRIES = [
   { code: "CN", name: "China", flag: "🇨🇳", rate: "145%" },
@@ -28,23 +29,48 @@ const COUNTRIES = [
   { code: "TW", name: "Taiwan", flag: "🇹🇼", rate: "32%" },
 ]
 
+const UNIVERSE_OPTIONS = [
+  { id: "sp500",        name: "S&P 500" },
+  { id: "dow",          name: "Dow Jones" },
+  { id: "nasdaq",       name: "NASDAQ" },
+  { id: "sector_top10", name: "Top 10 Stocks" },
+] as const
+
+// Sector IDs are passed directly to the backend API
 const SECTORS = [
-  { id: "steel",    name: "Steel & Aluminum", },
-  { id: "semis",    name: "Semiconductors", },
-  { id: "auto",     name: "Automotive", },
-  { id: "pharma",   name: "Pharmaceuticals", },
-  { id: "agri",     name: "Agriculture", },
-  { id: "textiles", name: "Textiles", },
-  { id: "energy",   name: "Energy",         },
-  { id: "consumer", name: "Consumer Goods",  },
+  { id: "Aerospace",          name: "Aerospace" },
+  { id: "Agriculture",        name: "Agriculture" },
+  { id: "Automotive",         name: "Automotive" },
+  { id: "Energy",             name: "Energy" },
+  { id: "Lumber",             name: "Lumber" },
+  { id: "Maritime",           name: "Maritime" },
+  { id: "Metals",             name: "Metals" },
+  { id: "Minerals",           name: "Minerals" },
+  { id: "Pharmaceuticals",    name: "Pharmaceuticals" },
+  { id: "Steel & Aluminum",   name: "Steel & Aluminum" },
 ]
 
 const MARKETS = [
-  { id: "nasdaq", name: "NASDAQ",    value: "17,845.23", change: "+1.24%", up: true,  color: "green"  },
-  { id: "sp500",  name: "S&P 500",   value: "5,612.45",  change: "-0.38%", up: false, color: "red"    },
-  { id: "dow",    name: "Dow Jones", value: "41,234.67", change: "+0.62%", up: true,  color: "green"  },
-  { id: "vix",    name: "VIX",       value: "24.31",     change: "+3.12%", up: true,  color: "orange" },
+  { id: "nasdaq", name: "NASDAQ",    fallback: "17,845.23", change: "+1.24%", up: true,  color: "green"  },
+  { id: "sp500",  name: "S&P 500",   fallback: "5,612.45",  change: "-0.38%", up: false, color: "red"    },
+  { id: "dow",    name: "Dow Jones", fallback: "41,234.67", change: "+0.62%", up: true,  color: "green"  },
+  { id: "vix",    name: "VIX",       fallback: "24.31",     change: "+3.12%", up: true,  color: "orange" },
 ]
+
+// Maps frontend country codes -> DB country names
+const COUNTRY_API_NAMES: Record<string, string> = {
+  CN: "CHINA",
+  EU: "EUROPEAN UNION",
+  MX: "MEXICO",
+  CA: "CANADA",
+  JP: "JAPAN",
+  KR: "SOUTH KOREA",
+  VN: "VIETNAM",
+  IN: "INDIA",
+  GB: "UNITED KINGDOM",
+  TW: "TAIWAN",
+}
+
 
 declare global {
   namespace JSX {
@@ -57,8 +83,70 @@ declare global {
 export default function Page() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedCountry, setSelectedCountry] = useState<string>("CN")
-  const [selectedSector, setSelectedSector] = useState<string | null>(null) // null = nothing selected = empty chart
+  const [selectedSector, setSelectedSector] = useState<string | null>(null)
+  const [selectedUniverse, setSelectedUniverse] = useState<string>("sp500")
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
+
+  // API state
+  const [tariffProb, setTariffProb] = useState<number | null>(null)
+  const [tariffProbLoading, setTariffProbLoading] = useState(false)
+  const [chartData, setChartData] = useState<ChartDataResponse | null>(null)
+  const [chartLoading, setChartLoading] = useState(false)
+  const [indexPrices, setIndexPrices] = useState<Record<string, number | null>>({
+    nasdaq: null,
+    sp500: null,
+    dow: null,
+  })
+
+  // Fetch tariff probability when country + sector change
+  useEffect(() => {
+    if (!selectedSector) {
+      setTariffProb(null)
+      return
+    }
+    const countryApiName = COUNTRY_API_NAMES[selectedCountry]
+    if (!countryApiName) return
+
+    setTariffProbLoading(true)
+    fetchTariffProb(countryApiName, selectedSector).then(data => {
+      setTariffProb(data?.probability_percent ?? null)
+      setTariffProbLoading(false)
+    })
+  }, [selectedCountry, selectedSector])
+
+  // Fetch chart data when universe or sector changes
+  useEffect(() => {
+    const isTop10 = selectedUniverse === 'sector_top10'
+    if (isTop10 && !selectedSector) {
+      setChartData(null)
+      setChartLoading(false)
+      return
+    }
+    setChartLoading(true)
+    setChartData(null)
+    const sector = isTop10 ? selectedSector ?? undefined : undefined
+    fetchChartData(selectedUniverse as Universe, sector).then(data => {
+      setChartData(data)
+      setChartLoading(false)
+    })
+  }, [selectedUniverse, selectedSector])
+
+  // Fetch projected index prices on mount (for market cards)
+  useEffect(() => {
+    const indices = [
+      { type: 'nasdaq'   as const, key: 'nasdaq' },
+      { type: 'sp500'    as const, key: 'sp500'  },
+      { type: 'dowjones' as const, key: 'dow'    },
+    ]
+    indices.forEach(({ type, key }) => {
+      fetchIndexGraph(type).then(data => {
+        if (data?.points?.length) {
+          const latest = data.points[data.points.length - 1]
+          setIndexPrices(prev => ({ ...prev, [key]: latest.price }))
+        }
+      })
+    })
+  }, [])
 
   const activeCountry = COUNTRIES.find(c => c.code === selectedCountry)
 
@@ -78,13 +166,39 @@ export default function Page() {
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
               <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                <SectionCards />
+                <SectionCards tariffProb={tariffProb} tariffProbLoading={tariffProbLoading} />
 
                 {/* Country + Sector controls */}
                 <div className="px-4 lg:px-6">
                   <div className="flex flex-col gap-3 p-4 rounded-xl border border-border/40 bg-card">
-                    
-                    {/* Row 1: Country dropdown */}
+
+                      {/* Row 1: Universe */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-20">
+                        <IconChartLine className="size-3.5 text-red-500" />
+                        Universe
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {UNIVERSE_OPTIONS.map(u => (
+                          <button
+                            key={u.id}
+                            onClick={() => setSelectedUniverse(u.id)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                              selectedUniverse === u.id
+                                ? "bg-red-500/20 border-red-500/60 text-red-400"
+                                : "bg-muted/10 border-border/30 text-muted-foreground hover:border-border hover:text-foreground"
+                            }`}
+                          >
+                            {u.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-border/20" />
+
+                    {/* Row 2: Country dropdown */}
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-20">
                         <IconWorld className="size-3.5 text-red-500" />
@@ -125,13 +239,13 @@ export default function Page() {
                     {/* Divider */}
                     <div className="border-t border-border/20" />
 
-                    {/* Row 2: Sector — single select, neatly in a row */}
+                    {/* Row 3: Sector — single select */}
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-20">
                         <IconBuildingFactory2 className="size-3.5 text-red-500" />
                         Sector
                       </div>
-                      <div className="grid grid-cols-4 gap-2 flex-1">
+                      <div className="grid grid-cols-5 gap-2 flex-1">
                         {SECTORS.map(sector => (
                           <button
                             key={sector.id}
@@ -142,7 +256,6 @@ export default function Page() {
                                 : "bg-muted/10 border-border/30 text-muted-foreground hover:border-border hover:text-foreground"
                             }`}
                           >
-                            <span>{sector.icon}</span>
                             <span>{sector.name}</span>
                           </button>
                         ))}
@@ -158,8 +271,18 @@ export default function Page() {
                         </span>
                         <span className="text-[11px] text-muted-foreground">→</span>
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-medium">
-                          {SECTORS.find(s => s.id === selectedSector)?.icon} {SECTORS.find(s => s.id === selectedSector)?.name}
+                          {SECTORS.find(s => s.id === selectedSector)?.name}
                         </span>
+                        {tariffProbLoading && (
+                          <span className="text-[11px] text-muted-foreground animate-pulse ml-1">
+                            Fetching risk…
+                          </span>
+                        )}
+                        {!tariffProbLoading && tariffProb != null && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 font-medium ml-1">
+                            {tariffProb.toFixed(1)}% tariff risk
+                          </span>
+                        )}
                         <button
                           onClick={() => setSelectedSector(null)}
                           className="text-[11px] text-muted-foreground hover:text-foreground ml-auto transition-colors"
@@ -171,18 +294,23 @@ export default function Page() {
                   </div>
                 </div>
 
-                {/* Chart — empty state when no sector selected */}
+                {/* Chart */}
                 <div className="px-4 lg:px-6">
-                  {selectedSector ? (
-                    <ChartAreaInteractive />
-                  ) : (
+                  {selectedUniverse === 'sector_top10' && !selectedSector ? (
                     <div className="flex flex-col items-center justify-center h-64 rounded-xl border border-border/40 bg-card text-center gap-3">
                       <div className="text-4xl opacity-30">📊</div>
-                      <p className="text-sm text-muted-foreground">Select a sector above to load the chart</p>
+                      <p className="text-sm text-muted-foreground">Select a sector above to load the top 10 stocks chart</p>
                       <p className="text-xs text-muted-foreground/60">
-                        Choose a country and sector to visualize tariff impact data
+                        Choose a sector to visualize individual stock tariff impact
                       </p>
                     </div>
+                  ) : (
+                    <ChartAreaInteractive
+                      data={chartData}
+                      loading={chartLoading}
+                      country={activeCountry?.name}
+                      tariffProb={tariffProb}
+                    />
                   )}
                 </div>
 
@@ -206,7 +334,11 @@ export default function Page() {
                         </div>
                       </CardHeader>
                       <CardContent className="px-4 pb-3">
-                        <p className="text-xl font-bold tabular-nums">{market.value}</p>
+                        <p className="text-xl font-bold tabular-nums">
+                          {indexPrices[market.id] != null
+                            ? indexPrices[market.id]!.toLocaleString("en-US", { maximumFractionDigits: 2 })
+                            : market.fallback}
+                        </p>
                         <div className={`flex items-center gap-1 mt-0.5 ${market.up ? "text-green-400" : "text-red-400"}`}>
                           {market.up ? <IconTrendingUp className="size-3" /> : <IconTrendingDown className="size-3" />}
                           <span className="text-xs font-semibold">{market.change}</span>
