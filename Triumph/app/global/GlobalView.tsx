@@ -3,22 +3,25 @@
 import { useState, useMemo } from 'react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
-import {
-  SidebarInset,
-  SidebarProvider,
-} from '@/components/ui/sidebar'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { IconWorld } from '@tabler/icons-react'
 
 type TariffRow = {
   country: string
-  "tariff risk pct": number
+  tariff_risk_pct: string
+}
+
+type SectorRow = {
+  country: string
+  sector: string
+  tariff_risk_prob: number
 }
 
 interface Props {
   tariffData: TariffRow[]
+  sectorData: SectorRow[]
 }
 
-// Maps DB country names (lowercase) → COUNTRIES code
 const NAME_TO_CODE: Record<string, string> = {
   "china": "CN",
   "european union": "EU",
@@ -50,8 +53,19 @@ const NAME_TO_CODE: Record<string, string> = {
   "nigeria": "NG",
 }
 
-function formatRate(val: number): string {
-  // Handle both decimal (0.145) and whole-number (14.5 or 145) formats
+const SECTOR_ICONS: Record<string, string> = {
+  "semiconductors": "💾",
+  "steel & aluminum": "⚙️",
+  "textiles": "🧵",
+  "consumer goods": "📦",
+  "automotive": "🚗",
+  "agriculture": "🌾",
+  "pharmaceuticals": "💊",
+  "energy": "⚡",
+}
+
+function formatRate(val: string | number): string {
+  if (typeof val === "string") return val
   const pct = val < 1 ? val * 100 : val
   return `${Math.round(pct)}%`
 }
@@ -83,249 +97,6 @@ const COUNTRIES = [
   { code: "NG", name: "Nigeria", flag: "🇳🇬", zoom: "5/9/8" },
 ]
 
-const SECTOR_IMPACTS: Record<string, { sector: string; icon: string; impact: number; change: string; status: "critical" | "high" | "medium" | "low" }[]> = {
-  CN: [
-    { sector: "Semiconductors", icon: "💾", impact: 98, change: "+145%", status: "critical" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 92, change: "+145%", status: "critical" },
-    { sector: "Textiles", icon: "🧵", impact: 88, change: "+145%", status: "critical" },
-    { sector: "Consumer Goods", icon: "📦", impact: 85, change: "+145%", status: "critical" },
-    { sector: "Automotive", icon: "🚗", impact: 76, change: "+125%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 60, change: "+72%", status: "high" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 44, change: "+35%", status: "medium" },
-    { sector: "Energy", icon: "⚡", impact: 30, change: "+20%", status: "low" },
-  ],
-  EU: [
-    { sector: "Automotive", icon: "🚗", impact: 72, change: "+20%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 65, change: "+25%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 55, change: "+20%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 50, change: "+20%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 45, change: "+20%", status: "medium" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 35, change: "+15%", status: "medium" },
-    { sector: "Semiconductors", icon: "💾", impact: 28, change: "+10%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 20, change: "+8%", status: "low" },
-  ],
-  MX: [
-    { sector: "Automotive", icon: "🚗", impact: 90, change: "+25%", status: "critical" },
-    { sector: "Agriculture", icon: "🌾", impact: 78, change: "+25%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 70, change: "+25%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 60, change: "+25%", status: "high" },
-    { sector: "Textiles", icon: "🧵", impact: 55, change: "+25%", status: "high" },
-    { sector: "Semiconductors", icon: "💾", impact: 40, change: "+15%", status: "medium" },
-    { sector: "Energy", icon: "⚡", impact: 30, change: "+10%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 25, change: "+8%", status: "low" },
-  ],
-  CA: [
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 80, change: "+25%", status: "critical" },
-    { sector: "Automotive", icon: "🚗", impact: 75, change: "+25%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 65, change: "+25%", status: "high" },
-    { sector: "Energy", icon: "⚡", impact: 55, change: "+25%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 40, change: "+15%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 35, change: "+12%", status: "medium" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 20, change: "+8%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 15, change: "+5%", status: "low" },
-  ],
-  JP: [
-    { sector: "Automotive", icon: "🚗", impact: 82, change: "+24%", status: "critical" },
-    { sector: "Semiconductors", icon: "💾", impact: 75, change: "+24%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 60, change: "+24%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 50, change: "+20%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 40, change: "+18%", status: "medium" },
-    { sector: "Agriculture", icon: "🌾", impact: 35, change: "+15%", status: "medium" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 30, change: "+12%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 25, change: "+10%", status: "low" },
-  ],
-  KR: [
-    { sector: "Semiconductors", icon: "💾", impact: 80, change: "+26%", status: "critical" },
-    { sector: "Automotive", icon: "🚗", impact: 72, change: "+26%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 60, change: "+26%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 48, change: "+20%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 38, change: "+15%", status: "medium" },
-    { sector: "Agriculture", icon: "🌾", impact: 30, change: "+12%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 22, change: "+8%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 15, change: "+5%", status: "low" },
-  ],
-  VN: [
-    { sector: "Textiles", icon: "🧵", impact: 95, change: "+46%", status: "critical" },
-    { sector: "Consumer Goods", icon: "📦", impact: 88, change: "+46%", status: "critical" },
-    { sector: "Semiconductors", icon: "💾", impact: 70, change: "+46%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 60, change: "+46%", status: "high" },
-    { sector: "Automotive", icon: "🚗", impact: 45, change: "+30%", status: "medium" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 35, change: "+20%", status: "medium" },
-    { sector: "Energy", icon: "⚡", impact: 20, change: "+10%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 15, change: "+8%", status: "low" },
-  ],
-  IN: [
-    { sector: "Pharmaceuticals", icon: "💊", impact: 70, change: "+26%", status: "high" },
-    { sector: "Textiles", icon: "🧵", impact: 65, change: "+26%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 58, change: "+26%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 50, change: "+26%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 45, change: "+20%", status: "medium" },
-    { sector: "Automotive", icon: "🚗", impact: 38, change: "+15%", status: "medium" },
-    { sector: "Semiconductors", icon: "💾", impact: 25, change: "+10%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 18, change: "+8%", status: "low" },
-  ],
-  GB: [
-    { sector: "Automotive", icon: "🚗", impact: 45, change: "+10%", status: "medium" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 40, change: "+10%", status: "medium" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 35, change: "+10%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 30, change: "+10%", status: "low" },
-    { sector: "Agriculture", icon: "🌾", impact: 25, change: "+10%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 20, change: "+8%", status: "low" },
-    { sector: "Textiles", icon: "🧵", impact: 18, change: "+6%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 12, change: "+4%", status: "low" },
-  ],
-  TW: [
-    { sector: "Semiconductors", icon: "💾", impact: 95, change: "+32%", status: "critical" },
-    { sector: "Consumer Goods", icon: "📦", impact: 70, change: "+32%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 55, change: "+32%", status: "high" },
-    { sector: "Automotive", icon: "🚗", impact: 45, change: "+25%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 38, change: "+20%", status: "medium" },
-    { sector: "Agriculture", icon: "🌾", impact: 28, change: "+12%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 20, change: "+8%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 15, change: "+5%", status: "low" },
-  ],
-  BR: [
-    { sector: "Agriculture", icon: "🌾", impact: 65, change: "+10%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 55, change: "+10%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 45, change: "+10%", status: "medium" },
-    { sector: "Automotive", icon: "🚗", impact: 40, change: "+10%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 30, change: "+8%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 25, change: "+6%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 20, change: "+5%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 15, change: "+4%", status: "low" },
-  ],
-  AU: [
-    { sector: "Energy", icon: "⚡", impact: 50, change: "+10%", status: "medium" },
-    { sector: "Agriculture", icon: "🌾", impact: 45, change: "+10%", status: "medium" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 38, change: "+10%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 30, change: "+10%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 22, change: "+8%", status: "low" },
-    { sector: "Automotive", icon: "🚗", impact: 18, change: "+6%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 14, change: "+4%", status: "low" },
-    { sector: "Textiles", icon: "🧵", impact: 10, change: "+3%", status: "low" },
-  ],
-  RU: [
-    { sector: "Energy", icon: "⚡", impact: 80, change: "+35%", status: "critical" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 72, change: "+35%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 60, change: "+35%", status: "high" },
-    { sector: "Automotive", icon: "🚗", impact: 50, change: "+25%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 40, change: "+20%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 30, change: "+15%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 22, change: "+10%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 15, change: "+8%", status: "low" },
-  ],
-  SA: [
-    { sector: "Energy", icon: "⚡", impact: 70, change: "+10%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 40, change: "+10%", status: "medium" },
-    { sector: "Agriculture", icon: "🌾", impact: 32, change: "+10%", status: "medium" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 25, change: "+8%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 20, change: "+6%", status: "low" },
-    { sector: "Automotive", icon: "🚗", impact: 18, change: "+5%", status: "low" },
-    { sector: "Textiles", icon: "🧵", impact: 12, change: "+4%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 10, change: "+3%", status: "low" },
-  ],
-  ZA: [
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 68, change: "+30%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 55, change: "+30%", status: "high" },
-    { sector: "Automotive", icon: "🚗", impact: 48, change: "+25%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 38, change: "+18%", status: "medium" },
-    { sector: "Energy", icon: "⚡", impact: 30, change: "+12%", status: "low" },
-    { sector: "Textiles", icon: "🧵", impact: 24, change: "+10%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 18, change: "+8%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 12, change: "+5%", status: "low" },
-  ],
-  TR: [
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 60, change: "+10%", status: "high" },
-    { sector: "Textiles", icon: "🧵", impact: 55, change: "+10%", status: "high" },
-    { sector: "Automotive", icon: "🚗", impact: 45, change: "+10%", status: "medium" },
-    { sector: "Agriculture", icon: "🌾", impact: 38, change: "+8%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 30, change: "+8%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 22, change: "+6%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 16, change: "+5%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 12, change: "+4%", status: "low" },
-  ],
-  ID: [
-    { sector: "Textiles", icon: "🧵", impact: 78, change: "+32%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 70, change: "+32%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 60, change: "+32%", status: "high" },
-    { sector: "Energy", icon: "⚡", impact: 48, change: "+20%", status: "medium" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 40, change: "+18%", status: "medium" },
-    { sector: "Automotive", icon: "🚗", impact: 30, change: "+12%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 20, change: "+8%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 15, change: "+6%", status: "low" },
-  ],
-  TH: [
-    { sector: "Automotive", icon: "🚗", impact: 74, change: "+36%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 65, change: "+36%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 58, change: "+36%", status: "high" },
-    { sector: "Textiles", icon: "🧵", impact: 50, change: "+30%", status: "medium" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 40, change: "+20%", status: "medium" },
-    { sector: "Semiconductors", icon: "💾", impact: 30, change: "+15%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 22, change: "+10%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 16, change: "+8%", status: "low" },
-  ],
-  PH: [
-    { sector: "Consumer Goods", icon: "📦", impact: 65, change: "+17%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 58, change: "+17%", status: "high" },
-    { sector: "Textiles", icon: "🧵", impact: 48, change: "+17%", status: "medium" },
-    { sector: "Semiconductors", icon: "💾", impact: 42, change: "+17%", status: "medium" },
-    { sector: "Automotive", icon: "🚗", impact: 32, change: "+12%", status: "low" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 25, change: "+10%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 18, change: "+7%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 14, change: "+5%", status: "low" },
-  ],
-  MY: [
-    { sector: "Semiconductors", icon: "💾", impact: 70, change: "+24%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 60, change: "+24%", status: "high" },
-    { sector: "Textiles", icon: "🧵", impact: 50, change: "+24%", status: "medium" },
-    { sector: "Agriculture", icon: "🌾", impact: 42, change: "+18%", status: "medium" },
-    { sector: "Energy", icon: "⚡", impact: 35, change: "+14%", status: "medium" },
-    { sector: "Automotive", icon: "🚗", impact: 28, change: "+10%", status: "low" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 20, change: "+8%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 14, change: "+5%", status: "low" },
-  ],
-  SG: [
-    { sector: "Semiconductors", icon: "💾", impact: 55, change: "+10%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 40, change: "+10%", status: "medium" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 32, change: "+10%", status: "medium" },
-    { sector: "Energy", icon: "⚡", impact: 25, change: "+8%", status: "low" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 20, change: "+6%", status: "low" },
-    { sector: "Automotive", icon: "🚗", impact: 15, change: "+5%", status: "low" },
-    { sector: "Textiles", icon: "🧵", impact: 10, change: "+3%", status: "low" },
-    { sector: "Agriculture", icon: "🌾", impact: 8, change: "+2%", status: "low" },
-  ],
-  CH: [
-    { sector: "Pharmaceuticals", icon: "💊", impact: 65, change: "+31%", status: "high" },
-    { sector: "Consumer Goods", icon: "📦", impact: 52, change: "+31%", status: "high" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 42, change: "+25%", status: "medium" },
-    { sector: "Automotive", icon: "🚗", impact: 35, change: "+18%", status: "medium" },
-    { sector: "Semiconductors", icon: "💾", impact: 28, change: "+12%", status: "low" },
-    { sector: "Agriculture", icon: "🌾", impact: 20, change: "+8%", status: "low" },
-    { sector: "Textiles", icon: "🧵", impact: 14, change: "+6%", status: "low" },
-    { sector: "Energy", icon: "⚡", impact: 10, change: "+4%", status: "low" },
-  ],
-  AR: [
-    { sector: "Agriculture", icon: "🌾", impact: 62, change: "+10%", status: "high" },
-    { sector: "Energy", icon: "⚡", impact: 48, change: "+10%", status: "medium" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 40, change: "+10%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 32, change: "+8%", status: "low" },
-    { sector: "Automotive", icon: "🚗", impact: 25, change: "+7%", status: "low" },
-    { sector: "Textiles", icon: "🧵", impact: 18, change: "+5%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 14, change: "+4%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 10, change: "+3%", status: "low" },
-  ],
-  NG: [
-    { sector: "Energy", icon: "⚡", impact: 60, change: "+14%", status: "high" },
-    { sector: "Agriculture", icon: "🌾", impact: 50, change: "+14%", status: "medium" },
-    { sector: "Consumer Goods", icon: "📦", impact: 38, change: "+14%", status: "medium" },
-    { sector: "Textiles", icon: "🧵", impact: 28, change: "+10%", status: "low" },
-    { sector: "Steel & Aluminum", icon: "⚙️", impact: 20, change: "+8%", status: "low" },
-    { sector: "Pharmaceuticals", icon: "💊", impact: 15, change: "+5%", status: "low" },
-    { sector: "Automotive", icon: "🚗", impact: 12, change: "+4%", status: "low" },
-    { sector: "Semiconductors", icon: "💾", impact: 8, change: "+3%", status: "low" },
-  ],
-}
-
 const STATUS_COLORS = {
   critical: { bar: "bg-red-500",    text: "text-red-400",    dot: "bg-red-500" },
   high:     { bar: "bg-orange-500", text: "text-orange-400", dot: "bg-orange-500" },
@@ -341,24 +112,50 @@ const glassStyle: React.CSSProperties = {
   WebkitBackdropFilter: "blur(20px)",
 }
 
-export default function GlobalView({ tariffData }: Props) {
+export default function GlobalView({ tariffData, sectorData }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mapCountry, setMapCountry] = useState<string | null>(null)
 
-  // Build a code → formatted rate lookup from the DB data
   const rateByCode = useMemo(() => {
     const map: Record<string, string> = {}
     for (const row of tariffData) {
       const code = NAME_TO_CODE[row.country.toLowerCase().trim()]
-      if (code) {
-        map[code] = formatRate(row["tariff risk pct"])
-      }
+      if (code) map[code] = formatRate(row.tariff_risk_pct)
     }
     return map
   }, [tariffData])
 
+  const dynamicSectorImpacts = useMemo(() => {
+    const map: Record<string, { sector: string; icon: string; impact: number; change: string; status: "critical" | "high" | "medium" | "low" }[]> = {}
+    for (const row of sectorData) {
+      const code = NAME_TO_CODE[row.country.toLowerCase().trim()]
+      if (!code) continue
+      if (!map[code]) map[code] = []
+
+      const impact = Math.round(row.tariff_risk_prob * 100)
+      const status =
+        impact >= 80 ? "critical" :
+        impact >= 60 ? "high" :
+        impact >= 40 ? "medium" : "low"
+
+      const icon = SECTOR_ICONS[row.sector.toLowerCase()] ?? "📊"
+
+      map[code].push({
+        sector: row.sector,
+        icon,
+        impact,
+        change: `${impact}%`,
+        status,
+      })
+    }
+    for (const code of Object.keys(map)) {
+      map[code].sort((a, b) => b.impact - a.impact)
+    }
+    return map
+  }, [sectorData])
+
   const selectedCountryData = COUNTRIES.find(c => c.code === mapCountry)
-  const sectors = mapCountry ? SECTOR_IMPACTS[mapCountry] ?? null : null
+  const sectors = mapCountry ? dynamicSectorImpacts[mapCountry] ?? null : null
 
   const mapSrc = selectedCountryData
     ? `${MAP_BASE}#${selectedCountryData.zoom}`
