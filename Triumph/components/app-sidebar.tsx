@@ -36,17 +36,17 @@ const data = {
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
-    { title: "Dashboard", url: "#", icon: IconDashboard },
-    { title: "Global", url: "#", icon: IconListDetails },
-    { title: "Trends", url: "#", icon: IconChartBar },
+    { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
+    { title: "Global",    url: "/global",       icon: IconGlobe },
+    { title: "Trends",    url: "/trends",    icon: IconChartBar },
   ],
   navSecondary: [
-    { title: "Settings", url: "#", icon: IconSettings },
-    { title: "Get Help", url: "#", icon: IconHelp },
+    { title: "Settings", url: "/settings", icon: IconSettings },
+    { title: "Get Help", url: "/help",     icon: IconHelp },
   ],
   documents: [
-    { name: "Data Library", url: "#", icon: IconDatabase },
-    { name: "Reports", url: "#", icon: IconReport },
+    { name: "Data Library", url: "/data",      icon: IconDatabase },
+    { name: "Reports",      url: "/documents", icon: IconReport },
   ],
 }
 
@@ -57,7 +57,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="h-screen shrink-0 border-r border-white/5"
       style={{
         background: "rgba(10, 10, 15, 0.85)",
-        backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
       }}
       {...props}
@@ -74,8 +73,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <IconScale className="size-4 text-red-400" />
                 </div>
                 <div className="flex flex-col leading-none">
-                  <span className="text-sm font-semibold text-foreground">TariffOS</span>
-                  <span className="text-[10px] text-muted-foreground">Trade Intelligence</span>
+                  <span className="text-sm font-semibold text-foreground">Katan</span>
+                  <span className="text-[10px] text-muted-foreground">Tariff Intelligence</span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -84,8 +83,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-3">
-        {/* Subtle red glow accent */}
-        <div className="absolute top-20 left-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl pointer-events-none" />
+
 
         <NavMain items={data.navMain} />
         <NavDocuments items={data.documents} />
