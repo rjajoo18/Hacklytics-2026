@@ -45,8 +45,8 @@ const data = {
     { title: "Get Help", url: "/help",     icon: IconHelp },
   ],
   documents: [
-    { name: "Data Library", url: "/data",      icon: IconDatabase },
-    { name: "Reports",      url: "/documents", icon: IconReport },
+    { name: "Documents", url: "/documents",      icon: IconDatabase },
+    { name: "Data Library",      url: "/data", icon: IconReport },
   ],
 }
 
@@ -73,7 +73,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <IconScale className="size-4 text-red-400" />
                 </div>
                 <div className="flex flex-col leading-none">
-                  <span className="text-sm font-semibold text-foreground">Katan</span>
+                  <span className="text-sm font-semibold text-foreground">Quantara</span>
                   <span className="text-[10px] text-muted-foreground">Tariff Intelligence</span>
                 </div>
               </a>
