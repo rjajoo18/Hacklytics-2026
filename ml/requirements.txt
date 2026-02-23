@@ -1,0 +1,20 @@
+# Existing scraper dependencies
+requests
+beautifulsoup4
+lxml
+python-dotenv
+
+# Data & ML pipeline
+pandas>=2.0
+numpy
+scikit-learn
+catboost
+joblib
+
+# API
+fastapi
+uvicorn[standard]
+
+# Market projection pipeline
+yfinance>=0.2
+matplotlib>=3.7

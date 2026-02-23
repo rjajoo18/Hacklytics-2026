@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\College\\\\Hacklytics_2026\\\\ml\" && python -m scripts.project_market_impact \\\\\n  --master_csv global_tariff_impact_master.csv \\\\\n  --use_yfinance false \\\\\n  --seed 42 \\\\\n  --jump_lambda 1.0 \\\\\n  --jump_mu -0.02 \\\\\n  --jump_sigma 0.08 \\\\\n  --bottom_day 12 \\\\\n  --recovery_fraction 0.5 \\\\\n  --tau 20 \\\\\n  --out_dir outputs 2>&1)",
+      "Bash(cd \"C:\\\\College\\\\Hacklytics_2026\\\\ml\" && python -c \"\nfrom pathlib import Path\nrequired = [\n    'outputs/index_paths.csv',\n    'outputs/sector_paths.csv',\n    'outputs/stock_paths.csv',\n    'outputs/plots/sp500_90d.png',\n    'outputs/plots/nasdaq100_90d.png',\n    'outputs/plots/dow_90d.png',\n    'outputs/plots/sectors_top10_overview.png',\n]\nsector_plots = list\\(Path\\('outputs/plots/sectors'\\).glob\\('*_top10_90d.png'\\)\\)\nsector_csvs  = list\\(Path\\('outputs/sectors'\\).glob\\('*_top10.csv'\\)\\)\n\nfor f in required:\n    p = Path\\(f\\)\n    print\\(f'  {\\\\\"OK\\\\\" if p.exists\\(\\) else \\\\\"MISSING\\\\\":6s} {f}'\\)\nprint\\(f'  OK     {len\\(sector_plots\\)} sector plots in outputs/plots/sectors/'\\)\nprint\\(f'  OK     {len\\(sector_csvs\\)} per-sector CSVs in outputs/sectors/'\\)\n\n# Spot-check CSV columns\nimport pandas as pd\nidx = pd.read_csv\\('outputs/index_paths.csv'\\)\nstk = pd.read_csv\\('outputs/stock_paths.csv'\\)\nsec = pd.read_csv\\('outputs/sector_paths.csv'\\)\nprint\\(\\)\nprint\\('index_paths.csv    cols:', list\\(idx.columns\\)\\)\nprint\\('stock_paths.csv    cols:', list\\(stk.columns\\)\\)\nprint\\('sector_paths.csv   cols:', list\\(sec.columns\\)\\)\nprint\\('stock_paths rows:', len\\(stk\\), '  unique tickers:', stk['ticker'].nunique\\(\\)\\)\n\" 2>&1)",
+      "Bash(cd \"C:\\\\College\\\\Hacklytics_2026\\\\ml\" && python -m scripts.project_market_impact --master_csv global_tariff_impact_master.csv --use_yfinance false --seed 42 --out_dir outputs 2>&1)",
+      "Bash(cd C:\\\\College\\\\Hacklytics_2026\\\\ml:*)"
+    ]
+  }
+}

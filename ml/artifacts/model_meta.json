@@ -1,0 +1,78 @@
+{
+  "mode": "probability",
+  "num_cols": [
+    "trade_deficit",
+    "trade_deficit_3m_mean",
+    "trade_deficit_3m_change",
+    "imports",
+    "exports",
+    "gscpi",
+    "gscpi_3m_mean",
+    "unrate",
+    "unrate_3m_mean",
+    "month_of_year",
+    "months_since_start"
+  ],
+  "all_cols": [
+    "country",
+    "sector",
+    "trade_deficit",
+    "trade_deficit_3m_mean",
+    "trade_deficit_3m_change",
+    "imports",
+    "exports",
+    "gscpi",
+    "gscpi_3m_mean",
+    "unrate",
+    "unrate_3m_mean",
+    "month_of_year",
+    "months_since_start"
+  ],
+  "cat_feature_cols": [
+    "country",
+    "sector"
+  ],
+  "fill_values": {
+    "trade_deficit": 48.72487100000002,
+    "trade_deficit_3m_mean": 50.66280450000005,
+    "trade_deficit_3m_change": 0.4308050000000003,
+    "imports": 357.312968,
+    "exports": 155.0590705,
+    "gscpi": 0.41,
+    "gscpi_3m_mean": 0.4700000000000002,
+    "unrate": 4.0,
+    "unrate_3m_mean": 4.066666666666666,
+    "month_of_year": 6.0,
+    "months_since_start": 36.5
+  },
+  "pr_auc": 0.42133305497379403,
+  "n_positive": 502,
+  "weights": null,
+  "feat_importances": {
+    "country": 1.4017909888397913,
+    "sector": 18.11699508206365,
+    "trade_deficit": 4.898399448482211,
+    "trade_deficit_3m_mean": 9.195082566387986,
+    "trade_deficit_3m_change": 26.154789144981066,
+    "imports": 13.321569531933772,
+    "exports": 6.101319348360856,
+    "gscpi": 6.045115655860512,
+    "gscpi_3m_mean": 1.4970212629288338,
+    "unrate": 4.062641143176739,
+    "unrate_3m_mean": 3.943396236127885,
+    "month_of_year": 3.7140325257303974,
+    "months_since_start": 1.5478470651262901
+  },
+  "heuristic_weights": {
+    "pol_risk_3m_change": 0.28,
+    "pol_risk_score": 0.18,
+    "trade_deficit": 0.14,
+    "trade_deficit_3m_change": 0.1,
+    "gscpi": 0.12,
+    "fx_3m_std": 0.08,
+    "gscpi_3m_mean": 0.05,
+    "unrate": 0.03,
+    "manuf_M_T": 0.02,
+    "month_of_year": 0.0
+  }
+}
