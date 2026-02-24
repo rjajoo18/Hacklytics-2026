@@ -1,7 +1,7 @@
 # 📈 Quantara
 ### Predicting tariff risk and its impact on global markets
 
-> Built at **Hacklytics 2026: Golden Byte** by Risheet Jajoo, Vikram Ren, Shashank Shaga, and Sai Rajan.
+> Built at **Hacklytics 2026: Golden Byte** by Risheet Jajoo, Vikram Ren, Shashank Shaga, and Sai R.
 
 [![Devpost](https://img.shields.io/badge/Devpost-Quantara-blue?logo=devpost)](https://devpost.com/software/triumph-s6k4zr)
 ![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
@@ -40,8 +40,30 @@ Instead of reacting after the market moves, Quantara enables proactive macro ris
 
 Quantara operates through a dual-engine architecture supported by an intelligence layer.
 
-### 1. 🧮 Probability Engine — Sentiment Analysis
-We ingest data from **Kalshi prediction markets** to compute a **Surprise Gap** — the delta between implied probability and expected tariff outcomes. This gap acts as a forward-looking policy stress indicator, surfaced through an interactive global choropleth map that lets users instantly identify geopolitical hotspots.
+### 1. 🧮 Probability Engine — ML-Driven Tariff Prediction
+
+The core of Quantara's probability estimation is a **stacked ensemble model** that combines **CatBoost** and **Logistic Regression** to predict the likelihood of a tariff event occurring for a given country or sector.
+
+**Model Architecture:**
+- **CatBoost** serves as the primary learner, handling nonlinear feature interactions and categorical geopolitical variables without requiring extensive preprocessing.
+- **Logistic Regression** acts as a calibrated second-stage model, taking CatBoost's output probabilities alongside raw features to produce a well-calibrated final tariff probability.
+- The stacked output is then **combined with Kalshi prediction market data** to compute the **Surprise Gap** — the delta between what our model predicts and what the market has already priced in.
+
+**Training Datasets:**
+
+| Dataset | Source | Purpose |
+|---------|--------|---------|
+| Historical tariff & trade policy data | Our World in Data / public datasets | Ground truth labels and policy history |
+| Macroeconomic indicators | World Bank / public sources | Features: GDP, trade balance, current account deficits |
+| News & sentiment data | NewsAPI / web scraping | Sentiment signals preceding tariff announcements |
+
+**Feature Engineering highlights:**
+- Country-level trade deficit and surplus ratios
+- Rolling news sentiment scores leading up to policy events
+- Historical tariff frequency and escalation patterns
+- Macroeconomic stress indicators (e.g. trade-to-GDP ratio)
+
+The ensemble probability output is combined with Kalshi market-implied probabilities to produce the **Surprise Gap** — a forward-looking policy stress indicator surfaced through an interactive global choropleth map that lets users instantly identify geopolitical hotspots.
 
 ### 2. 📊 Impact Engine — Stochastic Forecasting
 We convert the Surprise Gap into projected financial impact using a **Merton Jump-Diffusion model**. Unlike traditional geometric Brownian motion models, this framework captures:
@@ -69,8 +91,9 @@ A **Retrieval-Augmented Generation (RAG) chatbot** powered by **Snowflake Cortex
 |-------|-------------|
 | Frontend | TypeScript, HTML, CSS, JavaScript |
 | Backend | Node.js, Python |
-| ML / Modeling | Python, yfinance, Monte Carlo / Merton Jump-Diffusion |
-| Data Sources | Kalshi prediction markets, yfinance |
+| ML / Tariff Prediction | CatBoost, Logistic Regression (stacked ensemble) |
+| Financial Modeling | Merton Jump-Diffusion, Monte Carlo simulation, yfinance |
+| Data Sources | Kalshi, Our World in Data, NewsAPI, World Bank / public macroeconomic datasets |
 | AI / RAG | Snowflake Cortex |
 
 ---
@@ -142,8 +165,9 @@ python ml/simulate.py
 
 ## 🏆 Accomplishments
 
-- Successfully integrated prediction market sentiment into stochastic financial modeling
-- Implemented a working Merton Jump-Diffusion simulation engine
+- Built and trained a stacked ensemble (CatBoost + Logistic Regression) to predict tariff probabilities from real-world macroeconomic, sentiment, and policy data
+- Successfully fused ML model outputs with Kalshi prediction market data to compute a novel Surprise Gap metric
+- Implemented a working Merton Jump-Diffusion simulation engine fed directly by the Surprise Gap
 - Built an interactive geopolitical risk visualization interface
 - Deployed a RAG-powered AI analyst for contextual interpretation
 - Delivered a cohesive full-stack macro stress-testing platform within a hackathon timeframe
